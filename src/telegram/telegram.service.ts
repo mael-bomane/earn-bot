@@ -19,9 +19,24 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.help((ctx) => ctx.reply('Send me any text!'));
     this.bot.on('text', (ctx) => ctx.reply(`You said: "${ctx.message.text}"`));
     this.bot.hears('hi', (ctx) => ctx.reply('Hey there!'));
-    this.bot.command('echo', (ctx) => {
-      const text = ctx.message.text.split(' ').slice(1).join(' ');
-      ctx.reply(text || 'Usage: /echo <your text>');
+
+    // 1. Register the /start command
+    this.bot.command('start', (ctx) => {
+      ctx.reply('Welcome to the bot! I can help you with some tasks. Try /edit or /quit.');
+      // You might add logic here to initialize user session, show main menu, etc.
+    });
+
+    // 2. Register the /edit command
+    this.bot.command('edit', (ctx) => {
+      ctx.reply("You've entered the edit mode.What would you like to edit ? ");
+      // Here, you would typically transition the user to an 'editing' state,
+      // perhaps ask for specific input, and then handle that input in subsequent messages.
+    });
+
+    // 3. Register the /quit command
+    this.bot.command('quit', (ctx) => {
+      ctx.reply('Are you sure you want to quit? (Yes/No)');
+      // For more complex flows, you might introduce a confirmation step here.
     });
     await this.bot.launch();
     console.log('Telegram bot launched and listening for updates.');
