@@ -1,9 +1,11 @@
+// src/telegram/telegram.module.ts
 import { Module, Provider } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
 import { Telegraf, Context } from 'telegraf';
 import { ConfigService, ConfigModule } from '@nestjs/config'; // Keep ConfigModule import here
 
 import { TELEGRAF_BOT } from './telegram.constants'; // <--- Import from new file
+import { PrismaService } from '../prisma/prisma.service';
 
 // Custom provider for the Telegraf bot
 const telegrafBotProvider: Provider = {
@@ -23,6 +25,7 @@ const telegrafBotProvider: Provider = {
   providers: [
     telegrafBotProvider,
     TelegramService,
+    PrismaService
   ],
   exports: [
     TelegramService,

@@ -1,0 +1,252 @@
+-- test/data/seed_bounties.sql
+
+-- --- 1. Database Schema Creation (REQUIRED) ---
+-- These are the actual CREATE TABLE statements generated from your Prisma schema.
+-- You need to get these from your Prisma migrations or by generating the DDL.
+
+-- Example for User table (replace with your actual DDL for ALL tables)
+CREATE TABLE `User` (
+    `id` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `username` VARCHAR(191) NULL,
+    `photo` TEXT NULL,
+    `firstName` VARCHAR(255) NULL,
+    `lastName` VARCHAR(255) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `isVerified` BOOLEAN NOT NULL DEFAULT 0,
+    `role` VARCHAR(191) NOT NULL DEFAULT 'USER',
+    `isTalentFilled` BOOLEAN NOT NULL DEFAULT 0,
+    `interests` TEXT NULL,
+    `bio` TEXT NULL,
+    `twitter` TEXT NULL,
+    `discord` TEXT NULL,
+    `github` TEXT NULL,
+    `linkedin` TEXT NULL,
+    `website` TEXT NULL,
+    `telegram` TEXT NULL,
+    `community` TEXT NULL,
+    `experience` VARCHAR(191) NULL,
+    `superteamLevel` VARCHAR(191) NULL,
+    `location` VARCHAR(191) NULL,
+    `cryptoExperience` VARCHAR(191) NULL,
+    `workPrefernce` VARCHAR(191) NULL,
+    `currentEmployer` VARCHAR(191) NULL,
+    `notifications` JSON NULL,
+    `private` BOOLEAN NOT NULL DEFAULT 0,
+    `skills` JSON NULL,
+    `currentSponsorId` VARCHAR(191) NULL,
+    `emailVerified` DATETIME(3) NULL,
+    `hackathonId` VARCHAR(191) NULL,
+    `featureModalShown` BOOLEAN NOT NULL DEFAULT 0,
+    `surveysShown` JSON NULL,
+    `stRecommended` BOOLEAN NOT NULL DEFAULT 0,
+    `acceptedTOS` BOOLEAN NOT NULL DEFAULT 0,
+    `stLead` VARCHAR(191) NULL,
+    `isBlocked` BOOLEAN NOT NULL DEFAULT 0,
+    `privyDid` VARCHAR(191) NOT NULL,
+    `isKYCVerified` BOOLEAN NOT NULL DEFAULT 0,
+    `kycName` VARCHAR(191) NULL,
+    `kycCountry` VARCHAR(191) NULL,
+    `kycAddress` VARCHAR(191) NULL,
+    `kycDOB` VARCHAR(191) NULL,
+    `kycIDNumber` VARCHAR(191) NULL,
+    `kycIDType` VARCHAR(191) NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `User_email_key` (`email`),
+    UNIQUE INDEX `User_username_key` (`username`),
+    UNIQUE INDEX `User_privyDid_key` (`privyDid`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Example for Sponsors table (replace with your actual DDL)
+CREATE TABLE `Sponsors` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
+    `logo` VARCHAR(191) NULL,
+    `url` VARCHAR(191) NULL,
+    `industry` VARCHAR(191) NOT NULL,
+    `twitter` VARCHAR(191) NULL,
+    `bio` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `isArchived` BOOLEAN NOT NULL DEFAULT 0,
+    `isActive` BOOLEAN NOT NULL DEFAULT 1,
+    `entityName` VARCHAR(191) NULL,
+    `isVerified` BOOLEAN NOT NULL DEFAULT 0,
+    `isCaution` BOOLEAN NOT NULL DEFAULT 0,
+    `st` BOOLEAN NOT NULL DEFAULT 0,
+    `verificationInfo` JSON NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `Sponsors_name_key` (`name`),
+    UNIQUE INDEX `Sponsors_slug_key` (`slug`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Example for BountiesTemplates (if Bounties depends on it directly or indirectly)
+CREATE TABLE `BountiesTemplates` (
+    `id` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(191) NULL,
+    `deadline` DATETIME(3) NULL,
+    `slug` VARCHAR(191) NULL,
+    `description` TEXT NULL,
+    `color` VARCHAR(191) NULL,
+    `emoji` VARCHAR(191) NULL,
+    `isFeatured` BOOLEAN NOT NULL DEFAULT 0,
+    `isActive` BOOLEAN NOT NULL DEFAULT 1,
+    `isArchived` BOOLEAN NOT NULL DEFAULT 0,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `skills` JSON NULL,
+    `type` ENUM('bounty', 'project', 'hackathon') NOT NULL DEFAULT 'bounty',
+    `requirements` TEXT NULL,
+    `region` ENUM('GLOBAL', 'INDIA', 'VIETNAM', 'GERMANY', 'TURKEY', 'MEXICO', 'UK', 'UAE', 'NIGERIA', 'ISRAEL', 'BRAZIL', 'MALAYSIA', 'BALKAN', 'PHILIPPINES', 'JAPAN', 'FRANCE', 'CANADA', 'SINGAPORE', 'POLAND', 'KOREA', 'IRELAND', 'UKRAINE', 'ARGENTINA', 'USA', 'SPAIN') NOT NULL DEFAULT 'GLOBAL',
+    `applicationType` ENUM('rolling', 'fixed') NOT NULL DEFAULT 'fixed',
+    `status` ENUM('OPEN', 'REVIEW', 'CLOSED', 'VERIFYING', 'VERIFY_FAIL') NOT NULL DEFAULT 'OPEN',
+    `timeToComplete` VARCHAR(191) NULL,
+    `token` VARCHAR(191) NULL,
+    `references` JSON NULL,
+    `referredBy` VARCHAR(191) NULL,
+    `publishedAt` DATETIME(3) NULL,
+    `compensationType` ENUM('fixed', 'range', 'variable') NOT NULL DEFAULT 'fixed',
+    `maxRewardAsk` INT NULL,
+    `minRewardAsk` INT NULL,
+    `language` VARCHAR(191) NULL,
+    `rewardAmount` DOUBLE NULL,
+    `rewards` JSON NULL,
+    `maxBonusSpots` INT NOT NULL DEFAULT 0,
+    `usdValue` DOUBLE NULL,
+    `sponsorId` VARCHAR(191) NOT NULL,
+    `pocId` VARCHAR(191) NOT NULL,
+    `pocSocials` VARCHAR(191) NULL,
+    `source` ENUM('NATIVE', 'IMPORT') NOT NULL DEFAULT 'NATIVE',
+    `isPublished` BOOLEAN NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Example for Hackathon (if Bounties depends on it)
+CREATE TABLE `Hackathon` (
+    `id` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `logo` VARCHAR(191) NOT NULL,
+    `sponsorId` VARCHAR(191) NULL,
+    `deadline` DATETIME(3) NULL,
+    `startDate` DATETIME(3) NULL,
+    `description` VARCHAR(191) NOT NULL,
+    `altLogo` VARCHAR(191) NULL,
+    `announceDate` DATETIME(3) NULL,
+    `eligibility` JSON NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `Hackathon_slug_key` (`slug`),
+    UNIQUE INDEX `Hackathon_sponsorId_key` (`sponsorId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Example for Bounties table (replace with your actual DDL including foreign keys)
+CREATE TABLE `Bounties` (
+    `id` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
+    `description` LONGTEXT NULL,
+    `deadline` DATETIME(3) NULL,
+    `eligibility` JSON NULL,
+    `status` ENUM('OPEN', 'REVIEW', 'CLOSED', 'VERIFYING', 'VERIFY_FAIL') NOT NULL DEFAULT 'OPEN',
+    `token` VARCHAR(191) NULL,
+    `rewardAmount` DOUBLE NULL,
+    `rewards` JSON NULL,
+    `maxBonusSpots` INT NOT NULL DEFAULT 0,
+    `usdValue` DOUBLE NULL,
+    `sponsorId` VARCHAR(191) NOT NULL,
+    `pocId` VARCHAR(191) NOT NULL,
+    `source` ENUM('NATIVE', 'IMPORT') NOT NULL DEFAULT 'NATIVE',
+    `isPublished` BOOLEAN NOT NULL DEFAULT 0,
+    `isFeatured` BOOLEAN NOT NULL DEFAULT 0,
+    `isActive` BOOLEAN NOT NULL DEFAULT 1,
+    `isArchived` BOOLEAN NOT NULL DEFAULT 0,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `applicationLink` VARCHAR(191) NULL,
+    `skills` JSON NULL,
+    `type` ENUM('bounty', 'project', 'hackathon') NOT NULL DEFAULT 'bounty',
+    `requirements` TEXT NULL,
+    `isWinnersAnnounced` BOOLEAN NOT NULL DEFAULT 0,
+    `templateId` VARCHAR(191) NULL,
+    `region` VARCHAR(191) NOT NULL DEFAULT 'GLOBAL',
+    `pocSocials` VARCHAR(191) NULL,
+    `hackathonprize` BOOLEAN NOT NULL DEFAULT 0,
+    `applicationType` ENUM('rolling', 'fixed') NOT NULL DEFAULT 'fixed',
+    `timeToComplete` VARCHAR(191) NULL,
+    `references` JSON NULL,
+    `referredBy` VARCHAR(191) NULL,
+    `publishedAt` DATETIME(3) NULL,
+    `isPrivate` BOOLEAN NOT NULL DEFAULT 0,
+    `hackathonId` VARCHAR(191) NULL,
+    `compensationType` ENUM('fixed', 'range', 'variable') NOT NULL DEFAULT 'fixed',
+    `maxRewardAsk` INT NULL,
+    `minRewardAsk` INT NULL,
+    `language` VARCHAR(191) NULL,
+    `shouldSendEmail` BOOLEAN NOT NULL DEFAULT 1,
+    `isFndnPaying` BOOLEAN NOT NULL DEFAULT 0,
+    `winnersAnnouncedAt` DATETIME(3) NULL,
+    `discordMessageIds` JSON NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `Bounties_slug_key` (`slug`),
+    INDEX `Bounties_id_slug_idx` (`id`, `slug`),
+    INDEX `Bounties_sponsorId_idx` (`sponsorId`),
+    INDEX `Bounties_pocId_idx` (`pocId`),
+    INDEX `Bounties_templateId_idx` (`templateId`),
+    INDEX `Bounties_hackathonId_idx` (`hackathonId`),
+    INDEX `Bounties_isPublished_isPrivate_idx` (`isPublished`, `isPrivate`),
+    INDEX `Bounties_deadline_updatedAt_idx` (`deadline`, `updatedAt`),
+    INDEX `Bounties_isWinnersAnnounced_idx` (`isWinnersAnnounced`),
+    INDEX `Bounties_title_idx` (`title`),
+    INDEX `Bounties_deadline_asc_idx` (`deadline` ASC),
+    INDEX `Bounties_deadline_desc_idx` (`deadline` DESC),
+    INDEX `Bounties_winnersAnnouncedAt_desc_idx` (`winnersAnnouncedAt` DESC),
+    INDEX `Bounties_isFeatured_desc_idx` (`isFeatured` DESC),
+    INDEX `Bounties_isPublished_isActive_isArchived_status_idx` (`isPublished`, `isActive`, `isArchived`, `status`),
+    INDEX `Bounties_isPublished_isActive_isArchived_isPrivate_status_idx` (`isPublished`, `isActive`, `isArchived`, `isPrivate`, `status`),
+    INDEX `Bounties_sponsorId_isArchived_isPublished_isActive_idx` (`sponsorId`, `isArchived`, `isPublished`, `isActive`),
+    INDEX `Bounties_isPublished_isActive_isPrivate_hackathonprize_idx` (`isPublished`, `isActive`, `isPrivate`, `hackathonprize`),
+    INDEX `Bounties_compensationType_usdValue_idx` (`compensationType`, `usdValue`),
+    INDEX `Bounties_compensationType_maxRewardAsk_idx` (`compensationType`, `maxRewardAsk`),
+    INDEX `Bounties_isWinnersAnnounced_isPublished_status_idx` (`isWinnersAnnounced`, `isPublished`, `status`),
+    INDEX `Bounties_region_isPublished_status_idx` (`region`, `isPublished`, `status`),
+    FOREIGN KEY (`templateId`) REFERENCES `BountiesTemplates`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (`sponsorId`) REFERENCES `Sponsors`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (`pocId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (`hackathonId`) REFERENCES `Hackathon`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `TelegramUser` (
+    `id` INT NOT NULL,
+    `region` ENUM('GLOBAL', 'INDIA', 'VIETNAM', 'GERMANY', 'TURKEY', 'MEXICO', 'UK', 'UAE', 'NIGERIA', 'ISRAEL', 'BRAZIL', 'MALAYSIA', 'BALKAN', 'PHILIPPINES', 'JAPAN', 'FRANCE', 'CANADA', 'SINGAPORE', 'POLAND', 'KOREA', 'IRELAND', 'UKRAINE', 'ARGENTINA', 'USA', 'SPAIN') NOT NULL DEFAULT 'GLOBAL',
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- --- 2. Insert Dummy Users and Sponsors (Required for Foreign Keys) ---
+
+INSERT INTO `User` (`id`, `email`, `username`, `firstName`, `lastName`, `isVerified`, `role`, `acceptedTOS`, `private`, `privyDid`) VALUES
+('d1111111-d111-4d11-b111-d11111111111', 'dummy.user@example.com', 'dummyuser', 'Dummy', 'User', 1, 'USER', 1, 0, 'did:privy:dummy1');
+
+INSERT INTO `Sponsors` (`id`, `name`, `slug`, `industry`, `isVerified`, `isActive`, `isArchived`) VALUES
+('e1111111-e111-4e11-c111-e11111111111', 'Dummy Sponsor Inc.', 'dummy-sponsor-inc', 'Technology', 1, 1, 0);
+
+-- --- 3. Insert 10 Dummy Bounties ---
+
+INSERT INTO `Bounties` (
+  `id`, `title`, `slug`, `description`, `deadline`, `eligibility`, `status`,
+  `rewardAmount`, `maxBonusSpots`, `usdValue`, `sponsorId`, `pocId`, `source`,
+  `isPublished`, `isFeatured`, `isActive`, `isArchived`, `applicationType`,
+  `type`, `compensationType`, `region`, `requirements`, `isWinnersAnnounced`,
+  `shouldSendEmail`, `isFndnPaying`
+) VALUES
+('b0000001-0000-4000-0000-000000000001', 'Frontend Feature Refinement', 'frontend-feature-refinement-1', 'Refine the user interface for our new dashboard module. Focus on responsiveness and accessibility.', '2025-07-15 23:59:59', '{}', 'OPEN', 500.00, 1, 500.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Must use React.js and Tailwind CSS. Figma designs will be provided.', 0, 1, 0),
+('b0000002-0000-4000-0000-000000000002', 'Smart Contract Audit - Level 1', 'smart-contract-audit-level-1', 'Conduct a basic security audit of our new token contract. Report any vulnerabilities.', '2025-07-20 23:59:59', '{}', 'OPEN', 1500.00, 0, 1500.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Experience with Solidity and security best practices required.', 0, 1, 0),
+('b0000003-0000-4000-0000-000000000003', 'Backend API Optimization', 'backend-api-optimization-1', 'Optimize existing REST API endpoints for faster response times. Focus on database queries.', '2025-07-25 23:59:59', '{}', 'OPEN', 800.00, 2, 800.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 1, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Proficiency in Node.js and SQL query optimization.', 0, 1, 0),
+('b0000004-0000-4000-0000-000000000004', 'Content Writing - Blog Post Series', 'content-writing-blog-series-1', 'Write a series of 3 blog posts (800-1000 words each) on blockchain and DeFi topics.', '2025-08-01 23:59:59', '{}', 'OPEN', 400.00, 0, 400.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Strong writing skills and understanding of crypto concepts.', 0, 1, 0),
+('b0000005-0000-4000-0000-000000000005', 'UI/UX Design for Mobile App', 'ui-ux-design-mobile-app-1', 'Design intuitive user interfaces for our new mobile application. Deliverables include wireframes and mockups.', '2025-08-05 23:59:59', '{}', 'OPEN', 1200.00, 1, 1200.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 1, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Proficiency in Figma or Adobe XD.', 0, 1, 0),
+('b0000006-0000-4000-0000-000000000006', 'Community Management - Discord Moderator', 'community-management-discord-1', 'Act as a Discord moderator, engaging with the community and answering questions for 20 hours/week.', '2025-08-10 23:59:59', '{}', 'OPEN', 600.00, 0, 600.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Prior experience with Discord community management.', 0, 1, 0),
+('b0000007-0000-4000-0000-000000000007', 'Data Analytics - User Engagement', 'data-analytics-user-engagement-1', 'Analyze user engagement data from our platform and provide actionable insights. Tableau experience is a plus.', '2025-08-15 23:59:59', '{}', 'OPEN', 900.00, 0, 900.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Strong analytical skills and SQL proficiency.', 0, 1, 0),
+('b0000008-0000-4000-0000-000000000008', 'Mobile App Development - Bug Fixing', 'mobile-app-dev-bug-fixing-1', 'Identify and fix critical bugs in our existing iOS application. Swift/Kotlin experience required.', '2025-08-20 23:59:59', '{}', 'OPEN', 700.00, 1, 700.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Debugging skills and knowledge of mobile development lifecycle.', 0, 1, 0),
+('b0000009-0000-4000-0000-000000000009', 'Marketing Campaign Strategy', 'marketing-campaign-strategy-1', 'Develop a comprehensive marketing strategy for our upcoming product launch. Include channels and KPIs.', '2025-08-25 23:59:59', '{}', 'OPEN', 1000.00, 0, 1000.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Proven experience in digital marketing and strategy.', 0, 1, 0),
+('b0000010-0000-4000-0000-000000000010', 'Technical Documentation Writing', 'technical-documentation-writing-1', 'Create clear and concise technical documentation for our API. Experience with Swagger/OpenAPI tools.', '2025-08-30 23:59:59', '{}', 'OPEN', 650.00, 0, 650.00, 'e1111111-e111-4e11-c111-e11111111111', 'd1111111-d111-4d11-b111-d11111111111', 'NATIVE', 1, 0, 1, 'fixed', 'bounty', 'fixed', 'GLOBAL', 'Ability to explain complex technical concepts simply.', 0, 1, 0);

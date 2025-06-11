@@ -1,0 +1,39 @@
+services:
+  redis:
+    image: redis:7.2-alpine # Using a lightweight Alpine-based Redis image
+    hostname: redis
+    ports:
+      - '6379:6379' # Expose Redis port to your host
+    # Volumes removed: Redis data will not persist across container restarts.
+    command: redis-server # No AOF persistence needed without volumes.
+    healthcheck: # Basic health check for Redis
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.0 # Using a stable MySQL 8.0 image
+    hostname: mysql
+    ports:
+      - '3306:3306' # Expose MySQL port to your host
+    environment:
+      MYSQL_ROOT_PASSWORD: your_root_password # IMPORTANT: Change this in production!
+      MYSQL_DATABASE: your_app_test_db        # Your dedicated test database
+      MYSQL_USER: test_user                   # Dedicated test database user
+      MYSQL_PASSWORD: your_strong_password    # Dedicated test database password
+    # Volumes removed: MySQL data will not persist across container restarts.
+    # This means the database starts fresh each time the container is recreated.
+    volumes:
+      # Mount the SQL file to be executed on container startup.
+      # This runs every time the container is initialized, ensuring a clean state with your seed data.
+     - ./test/data/seed_bounties.sql:/docker-entrypoint-initdb.d/permissions.sql:ro
+    healthcheck: # Health check for MySQL
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # depends_on:
+    #   - redis # Uncomment if your application needs Redis to be ready before MySQL (unlikely for tests)
+
+# No named volumes defined, as neither Redis nor MySQL data needs to persist.
