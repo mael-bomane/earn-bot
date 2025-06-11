@@ -696,9 +696,21 @@ model CreditLedger {
 }
 
 model TelegramUser {
-  id      BigInt   @id @unique
-  region  Regions  @default(GLOBAL)
+  id     BigInt    @id @unique
+  region Regions   @default(GLOBAL)
+  skills TelegramUserSkill[] @default([ALL])
 }
+
+enum TelegramUserSkill {
+  FRONTEND
+  BACKEND
+  CONTENT
+  OTHER
+  BLOCKCHAIN
+  COMMUNITY
+  ALL
+}
+
 enum CreditEventType {
   SUBMISSION
   SPAM_PENALTY
