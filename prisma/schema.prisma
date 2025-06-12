@@ -696,19 +696,11 @@ model CreditLedger {
 }
 
 model TelegramUser {
-  id     BigInt    @id @unique
-  region Regions   @default(GLOBAL)
-  skills TelegramUserSkill[] @default([ALL])
-}
-
-enum TelegramUserSkill {
-  FRONTEND
-  BACKEND
-  CONTENT
-  OTHER
-  BLOCKCHAIN
-  COMMUNITY
-  ALL
+  id                      BigInt   @id @unique
+  region                  Regions  @default(GLOBAL)
+  skills                  Json     @default("[\"ALL\"]")
+  setup                   Boolean  @default(false)
+  notificationPreferences Json     @default("[]")
 }
 
 enum CreditEventType {
