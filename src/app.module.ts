@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
-import { HttpModule } from '@nestjs/axios';
+//import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from '@nestjs/cache-manager';
 import * as Joi from 'joi';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TelegramModule } from './telegram/telegram.module';
-// import { FetcherModule } from './fetcher/fetcher.module';
-import { PrismaModule } from './prisma/prisma.module'; // Import PrismaModule
-// import { RedisModule } from './redis/redis.module';   // Import RedisModule
+import { PrismaModule } from './prisma/prisma.module';
+import { BountyCacheModule } from './bounty-cache/bounty-cache.module';
+import { NotificationModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -33,15 +33,15 @@ import { PrismaModule } from './prisma/prisma.module'; // Import PrismaModule
         abortEarly: true,   // Abort validation on first error
       },
     }),
-    ScheduleModule.forRoot(),
-    HttpModule.register({
-      timeout: 5000,
-      maxRedirects: 5,
+    CacheModule.register({ // Configure CacheModule for in-memory cache
+      ttl: 3600,     // Cache TTL in seconds (e.g., 1 hour)
+      max: 100,      // Max number of items in cache (optional, default is unlimited)
+      isGlobal: true,
     }),
     PrismaModule,
-    //RedisModule,
     TelegramModule,
-    //FetcherModule,
+    BountyCacheModule,
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],

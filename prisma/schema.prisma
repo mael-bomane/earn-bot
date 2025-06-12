@@ -696,11 +696,36 @@ model CreditLedger {
 }
 
 model TelegramUser {
-  id                      BigInt   @id @unique
-  region                  Regions  @default(GLOBAL)
-  skills                  Json     @default("[\"ALL\"]")
-  setup                   Boolean  @default(false)
-  notificationPreferences Json     @default("[]")
+  id                    BigInt             @id @unique
+  region                Regions            @default(GLOBAL)
+  skills                Json               @default("[\"ALL\"]")
+  setup                 Boolean            @default(false)
+  notificationPreferences NotificationType @default(NONE)
+  bountyNotifications   BountyNotification[]
+}
+
+model BountyNotification {
+  id               String            @id @default(uuid())
+  telegramUserId   BigInt            
+  telegramUser     TelegramUser      @relation(fields: [telegramUserId], references: [id])
+  bountyId         String            
+  bountyDetails    Json             
+  notificationType String           
+  sendAt           DateTime        
+  sent             Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // index for faster lookup of unsent notifications by sendAt
+  @@index([sendAt, sent])
+}
+
+
+enum NotificationType {
+  BOUNTY
+  PROJECT
+  BOTH
+  NONE
 }
 
 enum CreditEventType {
