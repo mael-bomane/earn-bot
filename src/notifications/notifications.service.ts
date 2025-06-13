@@ -177,16 +177,14 @@ export class BountyNotificationService {
             `${bounty.region == 'GLOBAL' ?
               ` available globally ${this.getFlagForRegion(bounty.region)}\n\n`
               :
-              ` available for users based in <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`} matches your critetia !` +
-            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
+              ` available for users based in <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`} matches your critetia !\n\n` +
             `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
             (bounty.compensationType == 'fixed' ?
-              `<b>${bounty.payout}</b>`
+              `<b>${bounty.payout}</b> `
               :
-              `<b>${bounty.minRewardAsk}-${bounty.maxRewardAsk}</b>`
+              `<b>${bounty.minRewardAsk} ~ ${bounty.maxRewardAsk}</b> `
             ) +
-            `${bounty.token ?? 'N/A'}</b> (${bounty.compensationType.toLocaleLowerCase()}) \n\n` +
-            /*`${this.capitalizeFirstLetter(bounty.region.toLowerCase())} ${this.getFlagForRegion(bounty.region)}\n\n` +*/
+            `<b>${bounty.token ?? 'N/A'}</b> (${bounty.compensationType.toLocaleLowerCase()}) \n\n` +
             `Required Skills :\n ${skillsListDisplay}\n\n` +
             (bounty.deadline ?
               `${this.formatDeadlineRemaining(bounty.deadline)}\n\n`
