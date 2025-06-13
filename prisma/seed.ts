@@ -21,6 +21,10 @@ async function main() {
   // Define bounty types for cycling
   const bountyTypes = [BountyType.bounty, BountyType.hackathon, BountyType.project];
 
+  // Define the tokens to alternate
+  const tokens = ['USDC', 'SOL', 'ME'];
+  let currentTokenIndex = 0; // Initialize index for cycling through tokens
+
   // Define your allowed regions, ensuring they match the enum values (uppercase)
   const availableRegions: Regions[] = [
     Regions.INDIA, Regions.VIETNAM, Regions.GERMANY, Regions.TURKEY, Regions.MEXICO,
@@ -115,15 +119,18 @@ async function main() {
       }
     }
 
+    // --- New Logic for Alternating Token ---
+    const currentToken = tokens[currentTokenIndex];
+    currentTokenIndex = (currentTokenIndex + 1) % tokens.length; // Cycle to the next token
 
     bountiesData.push({
       title: title,
       slug: slug,
-      description: `This is a detailed description for ${bountyType} ${i + 1}. It involves solving a challenging problem related to ${assignedSkills.join(', ')} development in the ${assignedRegion} region. Compensation type: ${compensationType}.`,
+      description: `This is a detailed description for ${bountyType} ${i + 1}. It involves solving a challenging problem related to ${assignedSkills.join(', ')} development in the ${assignedRegion} region. Compensation type: ${compensationType}. The reward is in ${currentToken}.`, // Added token to description
       deadline: deadline,
       eligibility: { regions: [assignedRegion], skills: assignedSkills },
       status: i % 2 === 0 ? status.OPEN : status.REVIEW,
-      token: 'USDC',
+      token: currentToken, // <--- This is the change!
       rewardAmount: rewardAmount, // Dynamically set
       rewards: rewards, // Dynamically set
       maxBonusSpots: (i + 1) % 3,
@@ -140,7 +147,7 @@ async function main() {
       type: bountyType,
       requirements: `Applicants must have strong experience in ${assignedSkills[0].toLowerCase()} development.`,
       isWinnersAnnounced: false,
-      region: /*assignedRegion*/ Regions.VIETNAM,
+      region: assignedRegion /*Regions.VIETNAM*/, // Corrected: using assignedRegion which alternates, not fixed VIETNAM
       pocSocials: `@pocuser${i + 1}`,
       hackathonprize: bountyType === BountyType.hackathon,
       applicationType: ApplicationType.fixed,
@@ -159,7 +166,7 @@ async function main() {
     await prisma.bounties.create({
       data: bounty,
     });
-    console.log(`Created bounty with title: "${bounty.title}", type: "${bounty.type}", region: "${bounty.region}", and compensation: "${bounty.compensationType}"`);
+    console.log(`Created bounty with title: "${bounty.title}", type: "${bounty.type}", region: "${bounty.region}", compensation: "${bounty.compensationType}", and token: "${bounty.token}"`); // Added token to log
   }
 
   console.log('Seeding finished.');

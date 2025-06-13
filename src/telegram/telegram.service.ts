@@ -599,7 +599,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
 
   async sendMessageToUser(chatId: number, message: string) {
     try {
-      await this.bot.telegram.sendMessage(chatId, message);
+      await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML' });
       //console.log(`Message sent to ${chatId}: ${message}`);
     } catch (error) {
       console.error(`Failed to send message to ${chatId}:`, error);

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-//import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as Joi from 'joi';
 
@@ -23,8 +22,6 @@ import { NotificationModule } from './notifications/notifications.module';
           .default('development'),
         APP_PORT: Joi.number().default(3000),
         TELEGRAM_BOT_TOKEN: Joi.string().required(),
-        REDIS_URL: Joi.string().required(),
-        REDIS_DB: Joi.number().optional().default(0), // Often 0 for default DB
         DATABASE_URL: Joi.string().required(), // Add validation for your Prisma database URL
         ADMIN_CHAT_ID: Joi.string().optional(), // For Telegram notifications
       }),

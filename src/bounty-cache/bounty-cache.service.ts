@@ -64,6 +64,10 @@ export class BountyCacheService implements OnModuleInit {
           title: true, // Assuming a 'title' field for the bounty name
           slug: true,
           rewardAmount: true,
+          token: true,
+          minRewardAsk: true,
+          maxRewardAsk: true,
+          compensationType: true,
           deadline: true,
           skills: true, // This is JSONB in Prisma, so skills will be string[]
           region: true,
@@ -85,8 +89,12 @@ export class BountyCacheService implements OnModuleInit {
         return {
           id: bounty.id,
           name: bounty.title, // Map bounty's title to 'name' for the notification interface
-          link: `https://superteam.com/earn/${bounty.slug}?utm_source=telegrambot`, // bounty link with utm tracking
+          link: `https://earn.superteam.fun/listing/${bounty.slug}?utm_source=telegrambot`, // bounty link with utm tracking
           payout: bounty.rewardAmount,
+          token: bounty.token || 'N/A',
+          minRewardAsk: bounty.minRewardAsk?.toFixed(0).toString() || null,
+          maxRewardAsk: bounty.maxRewardAsk?.toFixed(0).toString() || null,
+          compensationType: bounty.compensationType,
           sponsorName: bounty.sponsor.name,
           deadline: bounty.deadline,
           skillsNeeded: skillsArray,
@@ -143,9 +151,6 @@ export class BountyCacheService implements OnModuleInit {
       }
     }
 
-    // ---
-    // Step 3: Schedule notifications for detected changes, checking for duplicates
-    // ---
     // Step 3: Schedule notifications for detected changes, checking for duplicates
     if (detectedChanges.length > 0) {
       this.logger.log(`Detected ${detectedChanges.length} changes. Scheduling notifications...`);
@@ -229,6 +234,10 @@ export class BountyCacheService implements OnModuleInit {
           title: true,
           slug: true,
           usdValue: true,
+          token: true,
+          compensationType: true,
+          minRewardAsk: true,
+          maxRewardAsk: true,
           deadline: true,
           skills: true,
           region: true,
@@ -248,8 +257,12 @@ export class BountyCacheService implements OnModuleInit {
         return {
           id: bounty.id,
           name: bounty.title,
-          link: `https://superteam.com/earn/${bounty.slug}`,
+          link: `https://earn.superteam.fun/listing/${bounty.slug}?utm_source=telegrambot`,
           payout: bounty.usdValue,
+          token: bounty.token || 'USDC',
+          compensationType: bounty.compensationType || null,
+          minRewardAsk: bounty.minRewardAsk?.toString() || null,
+          maxRewardAsk: bounty.maxRewardAsk?.toString() || null,
           sponsorName: bounty.sponsor.name,
           deadline: bounty.deadline,
           skillsNeeded: skillsArray,
@@ -335,7 +348,7 @@ export class BountyCacheService implements OnModuleInit {
       // User region is 'GLOBAL' OR user region matches bounty's region
       const userRegion = user.region;
       const bountyRegion = bounty.region;
-      this.logger.log(`User region : ${userRegion.toString()}\n Bounty region : ${bountyRegion.toString()}`);
+      this.logger.log(`User region : ${userRegion.toString()} Bounty region : ${bountyRegion.toString()}`);
 
       const regionMatch = userRegion.toString().toLowerCase() == bountyRegion.toLowerCase().toLowerCase() || bountyRegion == Regions.GLOBAL;
       if (!regionMatch) {

@@ -24,6 +24,40 @@ export class BountyNotificationService {
   ) { }
 
   /**
+     * Helper for flag emoji in bot notification message 
+     * @param region user or bounty region
+     */
+  private getFlagForRegion(region: string): string {
+    switch (region.toUpperCase()) {
+      case 'INDIA': return '🇮🇳';
+      case 'VIETNAM': return '🇻🇳';
+      case 'GERMANY': return '🇩🇪';
+      case 'TURKEY': return '🇹🇷';
+      case 'MEXICO': return '🇲🇽';
+      case 'UK': return '🇬🇧';
+      case 'UAE': return '🇦🇪';
+      case 'NIGERIA': return '🇳🇬';
+      case 'ISRAEL': return '🇮🇱';
+      case 'BRAZIL': return '🇧🇷';
+      case 'MALAYSIA': return '🇲🇾';
+      case 'BALKAN': return '🇧🇦'; // Using Bosnia and Herzegovina as a representative flag
+      case 'PHILIPPINES': return '🇵🇭';
+      case 'JAPAN': return '🇯🇵';
+      case 'FRANCE': return '🇫🇷';
+      case 'CANADA': return '🇨🇦';
+      case 'SINGAPORE': return '🇸🇬';
+      case 'POLAND': return '🇵🇱';
+      case 'KOREA': return '🇰🇷';
+      case 'IRELAND': return '🇮🇪';
+      case 'UKRAINE': return '🇺🇦';
+      case 'ARGENTINA': return '🇦🇷';
+      case 'USA': return '🇺🇸';
+      case 'SPAIN': return '🇪🇸';
+      default: return '🌍'; // Default globe emoji
+    }
+  }
+
+  /**
    * Schedules a bounty notification to be sent after a delay.
    * @param userId The ID of the Telegram user to notify (BigInt).
    * @param bountyId The unique ID of the bounty.
@@ -104,38 +138,39 @@ export class BountyNotificationService {
 
       // Cast bountyDetails to the specific interface for type safety
       const bounty = bountyDetails as unknown as BountyDetails;
-
       let message = 'New opportunity available!';
       const bountyTypeName = this.capitalizeFirstLetter(bounty.type.toLowerCase()); // e.g., "Bounty" or "Project"
 
       const skillsListDisplay = bounty.skillsNeeded.length > 0
-        ? bounty.skillsNeeded.map(skill => `\n· ${this.capitalizeFirstLetter(skill.toLowerCase())}`).join('')
-        : `\n· N/A`;
+        ? bounty.skillsNeeded.map(skill => `\n · ${this.capitalizeFirstLetter(skill.toLowerCase())}`).join('')
+        : `\n · N/A`;
 
       switch (notificationType) {
         case 'NEW_BOUNTY':
-          message = `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New ${bountyTypeName.toLowerCase()} has been posted!\n\n` +
-            `*Title:* ${bounty.name}\n` +
-            `By ${bounty.sponsorName}\n` +
-            `*Payout:* ${bounty.payout ? `$${bounty.payout}` : 'N/A'}\n` +
-            `*Region:* ${bounty.region}\n` +
-            (bounty.deadline ? `*Deadline:* ${new Date(bounty.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n` : '') +
+          message = `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> by <b>${bounty.sponsorName}</b>\n\n` +
+            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
+            `<b>${bounty.payout ?? 'N/A'} ${bounty.token ?? 'N/A'}</b> \n\n` +
+            /*`${this.capitalizeFirstLetter(bounty.region.toLowerCase())} ${this.getFlagForRegion(bounty.region)}\n\n` +*/
             `Required Skills :\n ${skillsListDisplay}\n\n` +
-            `[View ${bountyTypeName} Here](${bounty.link})`;
+            (bounty.deadline ? `*Deadline:* ${new Date(bounty.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n\n` : '') +
+            `${bounty.region == 'GLOBAL' ?
+              `Available Worldwide ${this.getFlagForRegion(bounty.region)}`
+              : `Regional Listing for ${this.capitalizeFirstLetter(bounty.region.toLowerCase())} ${this.getFlagForRegion(bounty.region)}`}\n\n` +
+            `👉 <a href="${bounty.link}">View on Superteam Earn</a>`;
           break;
         case 'REGION_UPDATED':
           message = `📍 The region for a ${bountyTypeName.toLowerCase()} you might be interested in has been updated!\n\n` +
             `*Title:* ${bounty.name}\n` +
-            `*Old Region:* ${bounty.oldRegion || 'N/A'}\n` + // Display old region
-            `*New Region:* ${bounty.region}\n` +
-            `[View ${bountyTypeName} Here](${bounty.link})`;
+            `*Old Region:* ${this.capitalizeFirstLetter(bounty.oldRegion.toLowerCase()) || 'N/A'} ${this.getFlagForRegion(bounty.region)}\n` + // Display old region
+            `*New Region:* ${this.capitalizeFirstLetter(bounty.oldRegion.toLowerCase())} ${this.getFlagForRegion(bounty.region)}\n` +
+            `👉 <a href="${bounty.link}">View on Superteam Earn</a>`;
           break;
         case 'DEADLINE_UPDATED':
           message = `⏳ The deadline for a ${bountyTypeName.toLowerCase()} you might be interested in has been updated!\n\n` +
             `*Title:* ${bounty.name}\n` +
             `*Old Deadline:* ${bounty.oldDeadline ? new Date(bounty.oldDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}\n` + // Display old deadline
             `*New Deadline:* ${new Date(bounty.deadline!).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n` +
-            `[View ${bountyTypeName} Here](${bounty.link})`;
+            `👉 <a href="${bounty.link}">View on Superteam Earn</a>`;
           break;
         default:
           this.logger.warn(`Unknown notification type: ${notificationType} for bounty ${bountyId}.`);

@@ -10,6 +10,10 @@ export interface BountyDetails {
   name: string; // Add name (or title) of the bounty
   link: string; // Add link (or URL) of the bounty
   payout: number | null;
+  token?: string | null;
+  minRewardAsk?: string | null;
+  maxRewardAsk?: string | null;
+  compensationType?: string | null;
   sponsorName: string;
   deadline: Date | null;
   skillsNeeded: string[];
