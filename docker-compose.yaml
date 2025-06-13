@@ -5,20 +5,15 @@ services:
     ports:
       - '3306:3306' # Expose MySQL port to your host
     environment:
-      MYSQL_ROOT_PASSWORD: your_root_password # IMPORTANT: Change this in production!
-      MYSQL_DATABASE: your_app_test_db        # Your dedicated test database
-      MYSQL_USER: test_user                   # Dedicated test database user
-      MYSQL_PASSWORD: your_strong_password    # Dedicated test database password
-    # Volumes removed: MySQL data will not persist across container restarts.
-    # This means the database starts fresh each time the container is recreated.
-    # No 'volumes' section means no persistence and no initial SQL file execution.
-    healthcheck: # Health check for MySQL
+      MYSQL_ROOT_PASSWORD: your_root_password 
+      MYSQL_DATABASE: your_app_test_db
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: your_strong_password
+    healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
-    # depends_on:
-    #   - redis # Uncomment if your application needs Redis to be ready before MySQL (unlikely for tests)
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest # Using the latest phpMyAdmin image

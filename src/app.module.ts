@@ -23,7 +23,6 @@ import { NotificationModule } from './notifications/notifications.module';
         APP_PORT: Joi.number().default(3000),
         TELEGRAM_BOT_TOKEN: Joi.string().required(),
         DATABASE_URL: Joi.string().required(), // Add validation for your Prisma database URL
-        ADMIN_CHAT_ID: Joi.string().optional(), // For Telegram notifications
       }),
       validationOptions: {
         allowUnknown: true, // Allow other env vars not in schema
@@ -31,8 +30,8 @@ import { NotificationModule } from './notifications/notifications.module';
       },
     }),
     CacheModule.register({ // Configure CacheModule for in-memory cache
-      ttl: 3600,     // Cache TTL in seconds (e.g., 1 hour)
-      max: 100,      // Max number of items in cache (optional, default is unlimited)
+      ttl: 0,     // no expiry, since we override values
+      max: 1,      // only 1 cached item, being a snapshot of the `Bounties` on the database
       isGlobal: true,
     }),
     PrismaModule,

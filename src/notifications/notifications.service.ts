@@ -57,6 +57,31 @@ export class BountyNotificationService {
     }
   }
 
+  private formatDeadlineRemaining = (deadline: Date | string): string => {
+    const now = new Date();
+    const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
+
+    // Calculate the difference in milliseconds
+    const diffMs = deadlineDate.getTime() - now.getTime();
+
+    // If the deadline is in the past
+    if (diffMs <= 0) {
+      return 'Expired';
+    }
+
+    const oneHourMs = 60 * 60 * 1000;
+    const oneDayMs = 24 * oneHourMs;
+
+    if (diffMs < oneDayMs) {
+      // If less than a day, show in hours
+      const hours = Math.ceil(diffMs / oneHourMs);
+      return `⏳ Due in ${hours} hour${hours === 1 ? '' : 's'}`;
+    } else {
+      // Otherwise, show in days
+      const days = Math.ceil(diffMs / oneDayMs);
+      return `⏳ Due in ${days} day${days === 1 ? '' : 's'}`;
+    }
+  }
   /**
    * Schedules a bounty notification to be sent after a delay.
    * @param userId The ID of the Telegram user to notify (BigInt).
@@ -147,12 +172,26 @@ export class BountyNotificationService {
 
       switch (notificationType) {
         case 'NEW_BOUNTY':
-          message = `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> by <b>${bounty.sponsorName}</b>\n\n` +
+          message =
+            `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> by <b>${bounty.sponsorName}</b>` +
+            `${bounty.region == 'GLOBAL' ?
+              ` available globally ${this.getFlagForRegion(bounty.region)}\n\n`
+              :
+              ` available for users based in <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`}\n\n` +
             `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
-            `<b>${bounty.payout ?? 'N/A'} ${bounty.token ?? 'N/A'}</b> \n\n` +
+            (bounty.compensationType == 'fixed' ?
+              `<b>${bounty.payout}</b>`
+              :
+              `<b>${bounty.minRewardAsk}-${bounty.maxRewardAsk}</b>`
+            ) +
+            `${bounty.token ?? 'N/A'}</b> (${bounty.compensationType.toLocaleLowerCase()}) \n\n` +
             /*`${this.capitalizeFirstLetter(bounty.region.toLowerCase())} ${this.getFlagForRegion(bounty.region)}\n\n` +*/
             `Required Skills :\n ${skillsListDisplay}\n\n` +
-            (bounty.deadline ? `*Deadline:* ${new Date(bounty.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n\n` : '') +
+            (bounty.deadline ?
+              `${this.formatDeadlineRemaining(bounty.deadline)}\n\n`
+              : ''
+            )
+            +
             `${bounty.region == 'GLOBAL' ?
               `Available Worldwide ${this.getFlagForRegion(bounty.region)}`
               : `Regional Listing for ${this.capitalizeFirstLetter(bounty.region.toLowerCase())} ${this.getFlagForRegion(bounty.region)}`}\n\n` +

@@ -10,14 +10,13 @@ This project uses the following technologies :
 - [NestJS](https://nestjs.com/) backend
 - [telegraf.js](https://github.com/telegraf/telegraf) telegram framework
 - [MySQL](https://www.mysql.com/) database
-- [Redis](https://redis.io/) cache
 - [Prisma](https://www.prisma.io/) ORM
 
 ## Project setup
 
 ### Environment Variables
 
-You can find an exhaustive `.env.example` at the root of this repository.
+You can find an exhaustive `.env.example` at the root of this repository, explaining all expected environment variables.
 
 ### Initial Setup
 
@@ -30,17 +29,19 @@ $ npx prisma generate
 $ npx prisma db push
 ```
 
-### Local Database
+### Database
 
-This project includes a `docker-compose.yaml` file to expose a `MySQL` database, along with a `Redis` cache on localhost.
+This project expectes a `DATABASE_URL` for `Mysql` using the format `mysql://user:password@host:port/database`
 
-In production, these are expected to be passed as `mysql://` and `redis://` to environment variables.
+This project includes a `docker-compose.yaml` file to spin up a `MySQL` database, along with a `phpMyAdmin` dashboard on localhost.
+
+In production, don't use this `Dockerfile` are expected to be passed as `mysql://` and `redis://` to environment variables.
 
 ```bash
 $ docker compose up
 ```
 
-### Database Seeding
+### Database Seeding (Testing)
 
 You can seed the database with 10 Bounty items, a user and a sponsor.
 
