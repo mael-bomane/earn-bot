@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { BountyNotification, NotificationType, Regions, BountyType } from '@prisma/client';
-import { BountyDetails } from '../interfaces/bounty.interface'; // Import the new interface
+import { BountyDetails } from '../interfaces/bounty.interface';
 
 // Define the cron schedule based on NODE_ENV
 // This constant will be evaluated when the module loads
@@ -108,15 +108,19 @@ export class BountyNotificationService {
       let message = 'New opportunity available!';
       const bountyTypeName = this.capitalizeFirstLetter(bounty.type.toLowerCase()); // e.g., "Bounty" or "Project"
 
+      const skillsListDisplay = bounty.skillsNeeded.length > 0
+        ? bounty.skillsNeeded.map(skill => `\n· ${this.capitalizeFirstLetter(skill.toLowerCase())}`).join('')
+        : `\n· N/A`;
+
       switch (notificationType) {
         case 'NEW_BOUNTY':
-          message = `✨ A new ${bountyTypeName.toLowerCase()} has been posted!\n\n` +
+          message = `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New ${bountyTypeName.toLowerCase()} has been posted!\n\n` +
             `*Title:* ${bounty.name}\n` +
-            `*Sponsor:* ${bounty.sponsorName}\n` +
+            `By ${bounty.sponsorName}\n` +
             `*Payout:* ${bounty.payout ? `$${bounty.payout}` : 'N/A'}\n` +
             `*Region:* ${bounty.region}\n` +
             (bounty.deadline ? `*Deadline:* ${new Date(bounty.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n` : '') +
-            `*Skills:* ${bounty.skillsNeeded.join(', ')}\n\n` +
+            `Required Skills :\n ${skillsListDisplay}\n\n` +
             `[View ${bountyTypeName} Here](${bounty.link})`;
           break;
         case 'REGION_UPDATED':

@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
-import { Bounties, BountyType, status, Regions, NotificationType } from '@prisma/client';
+import { Bounties, BountyType, status, Regions, NotificationType } from '@prisma/client'; // Import ScheduledNotificationStatus
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { BountyDetails } from '../interfaces/bounty.interface';
@@ -85,7 +85,7 @@ export class BountyCacheService implements OnModuleInit {
         return {
           id: bounty.id,
           name: bounty.title, // Map bounty's title to 'name' for the notification interface
-          link: `https://superteam.com/earn/${bounty.slug}`, // Construct the full bounty link
+          link: `https://superteam.com/earn/${bounty.slug}?utm_source=telegrambot`, // bounty link with utm tracking
           payout: bounty.rewardAmount,
           sponsorName: bounty.sponsor.name,
           deadline: bounty.deadline,
@@ -143,7 +143,10 @@ export class BountyCacheService implements OnModuleInit {
       }
     }
 
-    // Step 3: Schedule notifications for detected changes
+    // ---
+    // Step 3: Schedule notifications for detected changes, checking for duplicates
+    // ---
+    // Step 3: Schedule notifications for detected changes, checking for duplicates
     if (detectedChanges.length > 0) {
       this.logger.log(`Detected ${detectedChanges.length} changes. Scheduling notifications...`);
       for (const change of detectedChanges) {
@@ -151,6 +154,36 @@ export class BountyCacheService implements OnModuleInit {
         const relevantUsers = await this.getRelevantTelegramUsers(change.bounty);
 
         for (const user of relevantUsers) {
+          // --- NEW CHECK: Prevent duplicate scheduled notifications ---
+          const existingScheduledNotification = await this.prisma.bountyNotification.findFirst({
+            where: {
+              telegramUserId: user.id,
+              bountyId: change.bounty.id,
+              // Check for existing notifications for this user and bounty
+              // that are either not yet sent (pending) or have already been sent.
+              OR: [
+                {
+                  sent: false, // Notification is scheduled but not yet sent
+                  notificationType: change.type, // Check for pending notifications of the same change type
+                },
+                {
+                  sent: true, // Notification has already been sent
+                  notificationType: change.type, // Check for already sent notifications of the same change type
+                },
+              ],
+            },
+          });
+
+          if (existingScheduledNotification) {
+            this.logger.log(
+              `Skipping notification for user ${user.id} and bounty ${change.bounty.id} ` +
+              `(${change.type}): A BountyNotification already exists and is ` +
+              `${existingScheduledNotification.sent ? 'sent' : 'pending'} with type ${existingScheduledNotification.notificationType}.`
+            );
+            continue; // Skip to the next user if a notification already exists
+          }
+          // --- END NEW CHECK ---
+
           // Prepare the bounty details for the notification, including old values if applicable
           const bountyDataForNotification: BountyDetails = {
             ...change.bounty,
@@ -195,7 +228,7 @@ export class BountyCacheService implements OnModuleInit {
           id: true,
           title: true,
           slug: true,
-          rewardAmount: true,
+          usdValue: true,
           deadline: true,
           skills: true,
           region: true,
@@ -216,7 +249,7 @@ export class BountyCacheService implements OnModuleInit {
           id: bounty.id,
           name: bounty.title,
           link: `https://superteam.com/earn/${bounty.slug}`,
-          payout: bounty.rewardAmount,
+          payout: bounty.usdValue,
           sponsorName: bounty.sponsor.name,
           deadline: bounty.deadline,
           skillsNeeded: skillsArray,
@@ -304,7 +337,7 @@ export class BountyCacheService implements OnModuleInit {
       const bountyRegion = bounty.region;
       this.logger.log(`User region : ${userRegion.toString()}\n Bounty region : ${bountyRegion.toString()}`);
 
-      const regionMatch = userRegion == bountyRegion || bountyRegion == Regions.GLOBAL;
+      const regionMatch = userRegion.toString().toLowerCase() == bountyRegion.toLowerCase().toLowerCase() || bountyRegion == Regions.GLOBAL;
       if (!regionMatch) {
         this.logger.log(`User region mismatch !`);
         return false;

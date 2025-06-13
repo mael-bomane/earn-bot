@@ -140,7 +140,7 @@ async function main() {
       type: bountyType,
       requirements: `Applicants must have strong experience in ${assignedSkills[0].toLowerCase()} development.`,
       isWinnersAnnounced: false,
-      region: assignedRegion,
+      region: /*assignedRegion*/ Regions.VIETNAM,
       pocSocials: `@pocuser${i + 1}`,
       hackathonprize: bountyType === BountyType.hackathon,
       applicationType: ApplicationType.fixed,
