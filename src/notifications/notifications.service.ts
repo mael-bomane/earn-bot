@@ -177,7 +177,8 @@ export class BountyNotificationService {
             `${bounty.region == 'GLOBAL' ?
               ` available globally ${this.getFlagForRegion(bounty.region)}\n\n`
               :
-              ` available for users based in <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`}\n\n` +
+              ` available for users based in <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`} matches your critetia !` +
+            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
             `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
             (bounty.compensationType == 'fixed' ?
               `<b>${bounty.payout}</b>`
@@ -192,9 +193,6 @@ export class BountyNotificationService {
               : ''
             )
             +
-            `${bounty.region == 'GLOBAL' ?
-              `Available Worldwide ${this.getFlagForRegion(bounty.region)}`
-              : `Regional Listing for ${this.capitalizeFirstLetter(bounty.region.toLowerCase())} ${this.getFlagForRegion(bounty.region)}`}\n\n` +
             `👉 <a href="${bounty.link}">View on Superteam Earn</a>`;
           break;
         case 'REGION_UPDATED':
