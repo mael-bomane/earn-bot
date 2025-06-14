@@ -701,6 +701,7 @@ model TelegramUser {
   skills                Json               @default("[\"ALL\"]")
   setup                 Boolean            @default(false)
   notificationPreferences NotificationType @default(NONE)
+  minAsk                Int                @default(0) // New field for minimum USD value
   bountyNotifications   BountyNotification[]
 }
 

@@ -1,13 +1,12 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
-import { BountyNotification, NotificationType, Regions, BountyType } from '@prisma/client';
+import { BountyNotification, BountyType } from '@prisma/client';
 import { BountyDetails } from '../interfaces/bounty.interface';
 
 // Define the cron schedule based on NODE_ENV
-// This constant will be evaluated when the module loads
 const CRON_SCHEDULE =
   process.env.NODE_ENV === 'production'
     ? CronExpression.EVERY_HOUR
@@ -16,6 +15,9 @@ const CRON_SCHEDULE =
 @Injectable()
 export class BountyNotificationService {
   private readonly logger = new Logger(BountyNotificationService.name);
+  // Define a delay for rate limiting. 1000 ms / 30 messages = ~33.33 ms per message.
+  // We'll use 40ms to be safe and account for network latency/processing time.
+  private readonly MESSAGE_DELAY_MS = 40;
 
   constructor(
     private readonly configService: ConfigService,
@@ -24,9 +26,9 @@ export class BountyNotificationService {
   ) { }
 
   /**
-     * Helper for flag emoji in bot notification message 
-     * @param region user or bounty region
-     */
+   * Helper for flag emoji in bot notification message 
+   * @param region user or bounty region
+   */
   private getFlagForRegion(region: string): string {
     switch (region.toUpperCase()) {
       case 'INDIA': return '🇮🇳';
@@ -82,6 +84,7 @@ export class BountyNotificationService {
       return `⏳ Due in ${days} day${days === 1 ? '' : 's'}`;
     }
   }
+
   /**
    * Schedules a bounty notification to be sent after a delay.
    * @param userId The ID of the Telegram user to notify (BigInt).
@@ -117,6 +120,14 @@ export class BountyNotificationService {
   }
 
   /**
+   * Utility to pause execution for a given number of milliseconds.
+   * @param ms The number of milliseconds to wait.
+   */
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
    * Cron job to send overdue bounty notifications.
    * Runs every 10 minutes.
    */
@@ -138,6 +149,10 @@ export class BountyNotificationService {
             id: true,
           },
         },
+      },
+      // Order by 'createdAt' or 'sendAt' to process older notifications first
+      orderBy: {
+        sendAt: 'asc',
       },
     });
 
@@ -173,18 +188,19 @@ export class BountyNotificationService {
       switch (notificationType) {
         case 'NEW_BOUNTY':
           message =
-            `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> by <b>${bounty.sponsorName}</b>` +
+            `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> >` +
             `${bounty.region == 'GLOBAL' ?
               ` available globally ${this.getFlagForRegion(bounty.region)}\n\n`
               :
-              ` available for users based in <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`} matches your critetia !\n\n` +
-            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
+              ` available for <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}`}\n\n` +
+            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n` +
+            `By <b>${bounty.sponsorName}</b>\n\n` +
             (bounty.compensationType == 'fixed' ?
               `<b>${bounty.payout}</b> `
               :
               `<b>${bounty.minRewardAsk} ~ ${bounty.maxRewardAsk}</b> `
             ) +
-            `<b>${bounty.token ?? 'N/A'}</b> (${bounty.compensationType.toLocaleLowerCase()}) \n\n` +
+            `<b>${bounty.token ?? 'N/A'}</b> <i>${bounty.compensationType.toLocaleLowerCase() !== '— Fixed' ? '— Variable' : ''} Compensation </i> \n\n` +
             `Required Skills :\n ${skillsListDisplay}\n\n` +
             (bounty.deadline ?
               `${this.formatDeadlineRemaining(bounty.deadline)}\n\n`
@@ -195,16 +211,16 @@ export class BountyNotificationService {
           break;
         case 'REGION_UPDATED':
           message = `📍 The region for a ${bountyTypeName.toLowerCase()} you might be interested in has been updated!\n\n` +
-            `*Title:* ${bounty.name}\n` +
-            `*Old Region:* ${this.capitalizeFirstLetter(bounty.oldRegion.toLowerCase()) || 'N/A'} ${this.getFlagForRegion(bounty.region)}\n` + // Display old region
-            `*New Region:* ${this.capitalizeFirstLetter(bounty.oldRegion.toLowerCase())} ${this.getFlagForRegion(bounty.region)}\n` +
+            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
+            `Region updated to : <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}\n` +
+            `Previously : <b>${this.capitalizeFirstLetter(bounty.oldRegion.toLowerCase() || 'N/A')}</b> ${this.getFlagForRegion(bounty.oldRegion || '')}\n` + // Display old region, handle potential undefined
             `👉 <a href="${bounty.link}">View on Superteam Earn</a>`;
           break;
         case 'DEADLINE_UPDATED':
           message = `⏳ The deadline for a ${bountyTypeName.toLowerCase()} you might be interested in has been updated!\n\n` +
-            `*Title:* ${bounty.name}\n` +
-            `*Old Deadline:* ${bounty.oldDeadline ? new Date(bounty.oldDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}\n` + // Display old deadline
-            `*New Deadline:* ${new Date(bounty.deadline!).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n` +
+            `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n\n` +
+            `New Deadline : ${new Date(bounty.deadline!).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}\n` +
+            `Previous Deadline : ${bounty.oldDeadline ? new Date(bounty.oldDeadline).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}\n` + // Display old deadline
             `👉 <a href="${bounty.link}">View on Superteam Earn</a>`;
           break;
         default:
@@ -213,24 +229,22 @@ export class BountyNotificationService {
       }
 
       try {
-        // Telegram bot libraries (like Telegraf) often expect a Number for chat IDs,
-        // so convert BigInt to Number. Be aware of potential precision loss for extremely large BigInts,
-        // though Telegram user IDs should fit within standard Number limits.
         await this.telegramService.sendMessageToUser(Number(telegramUser.id), message);
         await this.prisma.bountyNotification.update({
           where: { id: notification.id },
-          data: { sent: true }, // Mark as sent upon successful (or attempted) delivery
+          data: { sent: true },
         });
         this.logger.log(`Successfully sent notification ${notification.id} to user ${telegramUser.id}.`);
       } catch (error) {
         this.logger.error(`Failed to send notification ${notification.id} to user ${telegramUser.id}:`, error);
-        // Even if sending fails, mark as sent to avoid repeated attempts for the same notification
-        // unless you implement a more sophisticated retry mechanism.
         await this.prisma.bountyNotification.update({
           where: { id: notification.id },
           data: { sent: true },
         });
       }
+
+      // delay after each message to respect rate limits
+      await this.delay(this.MESSAGE_DELAY_MS);
     }
   }
 
@@ -245,9 +259,9 @@ export class BountyNotificationService {
     try {
       const { count } = await this.prisma.bountyNotification.deleteMany({
         where: {
-          sent: true, // Only clean up notifications that have been marked as sent
+          sent: true,
           createdAt: {
-            lte: sevenDaysAgo, // Older than 7 days
+            lte: sevenDaysAgo,
           },
         },
       });

@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
-import { Bounties, BountyType, status, Regions, NotificationType } from '@prisma/client'; // Import ScheduledNotificationStatus
+import { BountyType, status, Regions, NotificationType } from '@prisma/client'; // Import ScheduledNotificationStatus
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { BountyDetails } from '../interfaces/bounty.interface';
@@ -159,7 +159,7 @@ export class BountyCacheService implements OnModuleInit {
         const relevantUsers = await this.getRelevantTelegramUsers(change.bounty);
 
         for (const user of relevantUsers) {
-          // --- NEW CHECK: Prevent duplicate scheduled notifications ---
+          // --- Prevent duplicate scheduled notifications ---
           const existingScheduledNotification = await this.prisma.bountyNotification.findFirst({
             where: {
               telegramUserId: user.id,
@@ -187,7 +187,6 @@ export class BountyCacheService implements OnModuleInit {
             );
             continue; // Skip to the next user if a notification already exists
           }
-          // --- END NEW CHECK ---
 
           // Prepare the bounty details for the notification, including old values if applicable
           const bountyDataForNotification: BountyDetails = {
@@ -233,7 +232,7 @@ export class BountyCacheService implements OnModuleInit {
           id: true,
           title: true,
           slug: true,
-          usdValue: true,
+          rewardAmount: true, // Use rewardAmount for notification payout
           token: true,
           compensationType: true,
           minRewardAsk: true,
@@ -258,11 +257,11 @@ export class BountyCacheService implements OnModuleInit {
           id: bounty.id,
           name: bounty.title,
           link: `https://earn.superteam.fun/listing/${bounty.slug}?utm_source=telegrambot`,
-          payout: bounty.usdValue,
+          payout: bounty.rewardAmount, // Use rewardAmount here
           token: bounty.token || 'USDC',
           compensationType: bounty.compensationType || null,
-          minRewardAsk: bounty.minRewardAsk?.toString() || null,
-          maxRewardAsk: bounty.maxRewardAsk?.toString() || null,
+          minRewardAsk: bounty.minRewardAsk?.toFixed(0).toString() || null,
+          maxRewardAsk: bounty.maxRewardAsk?.toFixed(0).toString() || null,
           sponsorName: bounty.sponsor.name,
           deadline: bounty.deadline,
           skillsNeeded: skillsArray,
@@ -305,12 +304,12 @@ export class BountyCacheService implements OnModuleInit {
   }
 
   /**
-   * Filters Telegram users based on bounty criteria (region, skills) and notification preferences (Bounty/Project).
+   * Filters Telegram users based on bounty criteria (region, skills, minAsk) and notification preferences (Bounty/Project).
    * Ignores Hackathon types.
    * @param bounty The bounty that has changed.
    * @returns An array of TelegramUser objects (only ID, region, skills, and notification preferences are needed).
    */
-  private async getRelevantTelegramUsers(bounty: BountyDetails): Promise<Pick<TelegramUser, 'id' | 'region' | 'skills' | 'notificationPreferences'>[]> {
+  private async getRelevantTelegramUsers(bounty: BountyDetails): Promise<Pick<TelegramUser, 'id' | 'region' | 'skills' | 'notificationPreferences' | 'minAsk'>[]> {
     // Fetch all users who have set up their profile and want bounty or project notifications
     const users = await this.prisma.telegramUser.findMany({
       where: {
@@ -326,10 +325,12 @@ export class BountyCacheService implements OnModuleInit {
         region: true,
         skills: true,
         notificationPreferences: true,
+        minAsk: true, // Include minAsk here
       },
     });
 
-    this.logger.log(`Found ${users.length} users to notify !`);
+    this.logger.log(`Found ${users.length} users to potentially notify.`);
+
 
     return users.filter(user => {
       // 1. Filter by Notification Type Preference (already mostly handled in Prisma query)
@@ -348,11 +349,11 @@ export class BountyCacheService implements OnModuleInit {
       // User region is 'GLOBAL' OR user region matches bounty's region
       const userRegion = user.region;
       const bountyRegion = bounty.region;
-      this.logger.log(`User region : ${userRegion.toString()} Bounty region : ${bountyRegion.toString()}`);
+      this.logger.log(`User region: ${userRegion.toString()} | Bounty region: ${bountyRegion.toString()}`);
 
-      const regionMatch = userRegion.toString().toLowerCase() == bountyRegion.toLowerCase().toLowerCase() || bountyRegion == Regions.GLOBAL;
+      const regionMatch = userRegion.toString().toLowerCase() === bountyRegion.toLowerCase() || bountyRegion === Regions.GLOBAL;
       if (!regionMatch) {
-        this.logger.log(`User region mismatch !`);
+        this.logger.log(`Region mismatch for user ${user.id}.`);
         return false;
       }
 
@@ -364,12 +365,47 @@ export class BountyCacheService implements OnModuleInit {
       // If user has 'ALL' skill selected, they are interested in any skill
       const userWantsAllSkills = userSkills.includes('ALL');
       if (userWantsAllSkills) {
-        return true; // If user wants all skills, and region/type match, they're relevant
+        this.logger.log(`User ${user.id} wants all skills.`);
+        // Continue to minAsk check if skills match (or user wants all)
+      } else {
+        // If user has specific skills, check for intersection with bounty skills
+        const hasMatchingSkills = bountySkills.some(bountySkill => userSkills.includes(bountySkill));
+        if (!hasMatchingSkills) {
+          this.logger.log(`No matching skills for user ${user.id}.`);
+          return false;
+        }
       }
 
-      // If user has specific skills, check for intersection with bounty skills
-      const hasMatchingSkills = bountySkills.some(bountySkill => userSkills.includes(bountySkill));
-      return hasMatchingSkills;
+      // 4. Filter by minAsk (NEW LOGIC)
+      const userMinAsk = user.minAsk ?? 0; // Default to 0 if null/undefined
+      let bountyRewardValue: number | null = null;
+
+      // Prioritize minRewardAsk, then maxRewardAsk, then payout
+      if (bounty.minRewardAsk) {
+        bountyRewardValue = parseFloat(bounty.minRewardAsk);
+      } else if (bounty.maxRewardAsk) {
+        bountyRewardValue = parseFloat(bounty.maxRewardAsk);
+      } else if (bounty.payout !== null && typeof bounty.payout !== 'undefined') {
+        bountyRewardValue = Number(bounty.payout); // Ensure it's a number
+      }
+
+      // If bountyRewardValue is null or can't be determined, we can't compare,
+      // so let's decide if we want to notify or not. For now, assume if no reward info, don't notify
+      if (bountyRewardValue === null || isNaN(bountyRewardValue)) {
+        this.logger.warn(`Bounty ${bounty.id} has no comparable reward value. Skipping minAsk check.`);
+        // If we reach here, and previous filters passed, we might still want to notify
+        // depending on business logic. For now, we'll return true if no reward is found
+        // assuming the user still wants notification if other criteria met.
+        // Consider if this should be 'return false;' for stricter filtering.
+        // For now, let's allow it if payout info is missing, assuming it's 'any' reward.
+        return true;
+      }
+
+      const meetsMinAsk = bountyRewardValue >= userMinAsk;
+      if (!meetsMinAsk) {
+        this.logger.log(`Bounty reward (${bountyRewardValue}) is less than user ${user.id}'s minAsk (${userMinAsk}).`);
+      }
+      return meetsMinAsk;
     });
   }
 }

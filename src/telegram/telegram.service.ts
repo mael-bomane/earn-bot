@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Inject, OnModuleDestroy, OnApplicationBootstrap } from '@nestjs/common';
 import { Telegraf, Context, Markup } from 'telegraf';
 import { CallbackQuery, InlineKeyboardMarkup } from 'telegraf/types';
-import { TELEGRAF_BOT, REGIONS, SKILLS, NOTIFICATION_TYPES } from './telegram.constants';
+import { TELEGRAF_BOT, REGIONS, SKILLS } from './telegram.constants';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { Regions, TelegramUser, NotificationType } from '@prisma/client'
@@ -92,15 +92,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       `\n${bountyEmoji} Bounties` +
       `\n${projectEmoji} Projects`;
 
+    const minAskDisplay = user.minAsk === 0 ? 'Any' : `${user.minAsk} USD`;
+
+
     return (
-      `Welcome back, ${mentionLink} 👋\n\n` +
       `Your current region is ${regionFlag} <b>${this.capitalizeFirstLetter(user.region.toLowerCase())}</b>\n\n` +
       `Your skills are : \n${skillsList}\n\n` +
       `Your notifications are set for :\n${notificationsList}\n\n` +
+      `Minimum reward: <b>${minAskDisplay}</b>\n\n` + // Display minAsk
       `You can update your preferences anytime:\n\n` +
-      `🌍 Update your region with /region.\n` +
-      `🛠️ Update your skills with the /skills.\n` +
-      `🔔 Update notification settings with /notifications.`
+      `🌍 Update your /region\n` +
+      `🛠️ Update your /skills\n` +
+      `🔔 Update /notifications\n` +
+      `💸 Update /reward` // New command for reward/minAsk
     );
   }
 
@@ -128,6 +132,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
             region: 'GLOBAL',
             skills: ['ALL'] as any,
             notificationPreferences: NotificationType.NONE, // Default to NONE
+            minAsk: 0, // Default minAsk
             setup: false,
           },
         });
@@ -140,7 +145,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
 
       // --- Conditional Logic based on User Setup Status ---
       if (telegramUser.setup) {
-        await ctx.reply(this.generateProfileSummary(telegramUser, mentionLink), { parse_mode: 'HTML' });
+        await ctx.reply(
+          `Welcome back, ${mentionLink} 👋\n\n` +
+          this.generateProfileSummary(telegramUser, mentionLink)
+          , { parse_mode: 'HTML' });
       } else {
         await ctx.reply(`Hi ${mentionLink}, welcome to the Superteam Earn bot 👋\n`, {
           parse_mode: 'HTML'
@@ -177,7 +185,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       });
     });
 
-    // 3. /skills edit command
+    // /skills edit command
     this.bot.command('skills', async (ctx) => {
       const userId = ctx.from.id;
       try {
@@ -192,7 +200,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
           : `\n· Not set`;
 
         await ctx.reply(
-          `Please select your skills. You can choose multiple:\n\nYour skills are :${skillsListDisplay}`,
+          `Select your skills with the buttons below this messages.\n\nYour currently selected skills are :\n${skillsListDisplay}`,
           {
             ...this.getSkillsKeyboard(currentSkills),
             parse_mode: 'HTML'
@@ -231,9 +239,29 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       }
     });
 
-    // 5. Register the /quit command
-    this.bot.command('quit', (ctx) => {
-      ctx.reply('Are you sure you want to quit? (Yes/No)');
+    // /reward command to modify user minimum reward 
+    this.bot.command('reward', async (ctx) => {
+      const userId = ctx.from.id;
+      try {
+        const userInDb = await this.prisma.telegramUser.findUnique({
+          where: { id: userId },
+          select: { minAsk: true }
+        });
+        const currentMinAsk = userInDb?.minAsk ?? 0;
+
+        const minAskDisplay = currentMinAsk === 0 ? 'Any' : `${currentMinAsk} USD`;
+
+        await ctx.reply(
+          `Please select the minimum USD reward value you wish to be notified for:\n\nCurrently set to: <b>${minAskDisplay}</b>`,
+          {
+            ...this.getMinAskKeyboard(currentMinAsk),
+            parse_mode: 'HTML'
+          }
+        );
+      } catch (error) {
+        console.error('Error fetching minAsk for /reward command:', error);
+        await ctx.reply('There was an error retrieving your minimum reward preferences. Please try again.');
+      }
     });
 
     // --- Action Handlers ---
@@ -412,7 +440,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       }
     });
 
-    // MODIFIED: Handle "Done Selecting Skills" callback
+    // Handle "Done Selecting Skills" callback
     this.bot.action('skills_done', async (ctx) => {
       const userId = ctx.from.id;
 
@@ -454,13 +482,13 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       }
     });
 
-    // MODIFIED: Handle notification type selection
-    this.bot.action(/^notification_select_/, async (ctx) => { // Changed prefix to 'notification_select_'
+    // Handle notification type selection - now leads to minAsk if in setup
+    this.bot.action(/^notification_select_/, async (ctx) => {
       const callbackQueryData = ctx.callbackQuery as CallbackQuery.DataQuery;
       const userId = ctx.from.id;
       const callbackData = callbackQueryData.data;
-      const selectedNotificationTypeString: string = callbackData.replace('notification_select_', ''); // Changed prefix
-      const selectedNotificationType: NotificationType = selectedNotificationTypeString.toUpperCase() as NotificationType; // Convert to enum
+      const selectedNotificationTypeString: string = callbackData.replace('notification_select_', '');
+      const selectedNotificationType: NotificationType = selectedNotificationTypeString.toUpperCase() as NotificationType;
 
       try {
         await this.prisma.telegramUser.update({
@@ -469,48 +497,40 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
         });
         console.log(`User ${userId} updated notifications to: ${selectedNotificationType} in DB`);
 
-        // Fetch the user data again to get the complete profile for summary
         const userInDb = await this.prisma.telegramUser.findUnique({
           where: { id: userId },
         });
 
         if (userInDb) {
-          const notificationDisplay = selectedNotificationType === NotificationType.NONE
-            ? `\n· None`
-            : `\n· ${this.capitalizeFirstLetter(selectedNotificationType.toLowerCase())}`;
-
-          let replyMessage: string;
-          let replyKeyboard: InlineKeyboardMarkup | undefined;
-
-          // If setup is still false, it means this is the final step of initial setup
+          // If setup is still false, proceed to minAsk selection
           if (!userInDb.setup) {
-            // Mark setup as true as this is the final step
-            await this.prisma.telegramUser.update({
-              where: { id: userId },
-              data: { setup: true },
-            });
-            const mentionLink = `<a href="tg://user?id=${userId}">@${ctx.from.username ?? userId}</a>`;
-            replyMessage = `Thank you for completing the setup!\n\n${this.generateProfileSummary(userInDb, mentionLink)}`;
-            replyKeyboard = undefined; // No keyboard needed after final setup
+            const currentMinAsk = userInDb.minAsk ?? 0;
+            const minAskDisplay = currentMinAsk === 0 ? 'Any' : `${currentMinAsk} USD`;
+
+            await ctx.editMessageText(
+              `Great! Now, please select the minimum USD value you wish to be notified for:\n\nCurrently set to: <b>${minAskDisplay}</b>`,
+              {
+                ...this.getMinAskKeyboard(currentMinAsk),
+                parse_mode: 'HTML'
+              }
+            );
+            await ctx.answerCbQuery('Notification preferences set! Proceeding to minimum ask selection.');
           } else {
             // If setup was already true, just confirm the update and show summary
             const mentionLink = `<a href="tg://user?id=${userId}">@${ctx.from.username ?? userId}</a>`;
-            replyMessage = `Your notification preferences have been updated to: *${selectedNotificationType.toLowerCase()}*.\n\n${this.generateProfileSummary(userInDb, mentionLink)}`;
-            replyKeyboard = undefined;
-          }
+            const replyMessage = this.generateProfileSummary(userInDb, mentionLink);
 
-          if (ctx.callbackQuery?.message) {
-            await ctx.editMessageText(replyMessage, {
-              reply_markup: replyKeyboard,
-              parse_mode: 'HTML' // Use HTML for summary
-            });
-          } else {
-            await ctx.reply(replyMessage, {
-              reply_markup: replyKeyboard,
-              parse_mode: 'HTML'
-            });
+            if (ctx.callbackQuery?.message) {
+              await ctx.editMessageText(replyMessage, {
+                parse_mode: 'HTML'
+              });
+            } else {
+              await ctx.reply(replyMessage, {
+                parse_mode: 'HTML'
+              });
+            }
+            await ctx.answerCbQuery(`Notifications set to ${selectedNotificationType.toLowerCase()}`);
           }
-          await ctx.answerCbQuery(`Notifications set to ${selectedNotificationType.toLowerCase()}`);
         }
       } catch (error) {
         console.error('Error setting notification preference:', error);
@@ -518,16 +538,75 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       }
     });
 
+    // Handle minAsk selection (removed custom input logic)
+    this.bot.action(/^minask_select_/, async (ctx) => {
+      const callbackQueryData = ctx.callbackQuery as CallbackQuery.DataQuery;
+      const userId = ctx.from.id;
+      const callbackData = callbackQueryData.data;
+      const selectedMinAskString = callbackData.replace('minask_select_', '');
 
-    // REMOVED: notifications_done action as it's now handled directly by notification_select_
-    // this.bot.action('notifications_done', async (ctx) => { ... });
+      let selectedMinAsk: number;
+      try {
+        selectedMinAsk = parseInt(selectedMinAskString, 10);
+        if (isNaN(selectedMinAsk) || selectedMinAsk < 0) {
+          // This should ideally not happen if buttons are properly generated
+          // but good for defensive programming.
+          throw new Error('Invalid number selected from keyboard');
+        }
+      } catch (error) {
+        console.error('Error parsing selected minAsk:', error);
+        await ctx.answerCbQuery('Error processing selection. Please try again.');
+        // Optionally, re-display the keyboard if an error occurs
+        const userInDb = await this.prisma.telegramUser.findUnique({ where: { id: userId }, select: { minAsk: true } });
+        const currentMinAsk = userInDb?.minAsk ?? 0;
+        await ctx.editMessageText(
+          `There was an error with your selection. Please try again:\n\nCurrently set to: <b>${currentMinAsk === 0 ? 'Any' : `${currentMinAsk} USD`}</b>`,
+          {
+            ...this.getMinAskKeyboard(currentMinAsk),
+            parse_mode: 'HTML'
+          }
+        );
+        return;
+      }
+
+      try {
+        await this.prisma.telegramUser.update({
+          where: { id: userId },
+          data: { minAsk: selectedMinAsk, setup: true }, // Mark setup as true here
+        });
+        console.log(`User ${userId} updated minAsk to: ${selectedMinAsk} in DB`);
+
+        const userInDb = await this.prisma.telegramUser.findUnique({
+          where: { id: userId },
+        });
+
+        if (userInDb) {
+          const mentionLink = `<a href="tg://user?id=${userId}">@${ctx.from.username ?? userId}</a>`;
+          const replyMessage = `Thank you for completing the setup!\n\n${this.generateProfileSummary(userInDb, mentionLink)}`;
+
+          if (ctx.callbackQuery?.message) {
+            await ctx.editMessageText(replyMessage, {
+              parse_mode: 'HTML'
+            });
+          } else {
+            await ctx.reply(replyMessage, {
+              parse_mode: 'HTML'
+            });
+          }
+          await ctx.answerCbQuery(`Minimum ask set to ${selectedMinAsk === 0 ? 'Any' : `${selectedMinAsk} USD`}`);
+        }
+      } catch (error) {
+        console.error('Error setting minAsk preference:', error);
+        await ctx.answerCbQuery('Error updating minimum ask preferences. Please try again.');
+      }
+    });
 
     console.log('Telegram bot launched and listening for updates.');
   }
 
   async onApplicationBootstrap() { // This hook will be called after ALL modules are initialized
     console.log('--- TelegramService onApplicationBootstrap: Launching Telegram bot ---');
-    await this.bot.launch(); // Launch the bot here!
+    await this.bot.launch();
     console.log('Telegram bot launched and listening for updates.');
   }
 
@@ -596,6 +675,31 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
     // Removed the "Done" button as selection is now direct
     return Markup.inlineKeyboard(rows);
   }
+
+  /**
+   * Helper to Generate Inline Keyboard for Minimum Ask (USD value).
+   * @param currentMinAsk The currently selected minimum ask value.
+   * @returns InlineKeyboardMarkup for minAsk selection.
+   */
+  private getMinAskKeyboard(currentMinAsk: number) {
+    const minAskOptions = [0, 50, 100, 1000]; // "Any", 50, 100, 1000 - No "Custom"
+    const buttonsPerRow = 2;
+
+    const minAskButtons = minAskOptions.map(value => {
+      const isSelected = currentMinAsk === value;
+      const emoji = isSelected ? '✅ ' : '';
+      const text = value === 0 ? 'Any' : `${value} USD`;
+      return Markup.button.callback(`${emoji}${text}`, `minask_select_${value}`);
+    });
+
+    const rows = [];
+    for (let i = 0; i < minAskButtons.length; i += buttonsPerRow) {
+      rows.push(minAskButtons.slice(i, i + buttonsPerRow));
+    }
+
+    return Markup.inlineKeyboard(rows);
+  }
+
 
   async sendMessageToUser(chatId: number, message: string) {
     try {

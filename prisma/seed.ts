@@ -21,17 +21,29 @@ async function main() {
   // Define bounty types for cycling
   const bountyTypes = [BountyType.bounty, BountyType.hackathon, BountyType.project];
 
-  // Define the tokens to alternate
-  const tokens = ['USDC', 'SOL', 'ME'];
-  let currentTokenIndex = 0; // Initialize index for cycling through tokens
+  // --- MODIFIED: Define tokens with weights for USDC bias ---
+  // Represent tokens and their relative weights.
+  // For example, USDC has 5 parts, SOL 2 parts, ME 1 part.
+  // Total parts = 5 + 2 + 1 = 8.
+  // USDC chance: 5/8, SOL chance: 2/8, ME chance: 1/8
+  const weightedTokens = [
+    { token: 'USDC', weight: 5 },
+    { token: 'SOL', weight: 2 },
+    { token: 'ME', weight: 1 },
+  ];
+
+  // Calculate the total weight
+  const totalWeight = weightedTokens.reduce((sum, item) => sum + item.weight, 0);
+
 
   // Define your allowed regions, ensuring they match the enum values (uppercase)
   const availableRegions: Regions[] = [
-    Regions.INDIA, Regions.VIETNAM, Regions.GERMANY, Regions.TURKEY, Regions.MEXICO,
-    Regions.UK, Regions.UAE, Regions.NIGERIA, Regions.ISRAEL, Regions.BRAZIL,
-    Regions.MALAYSIA, Regions.BALKAN, Regions.PHILIPPINES, Regions.JAPAN, Regions.FRANCE,
-    Regions.CANADA, Regions.SINGAPORE, Regions.POLAND, Regions.KOREA, Regions.IRELAND,
-    Regions.UKRAINE, Regions.ARGENTINA, Regions.USA, Regions.SPAIN
+    Regions.INDIA, Regions.VIETNAM,
+    //Regions.GERMANY, Regions.TURKEY, Regions.MEXICO,
+    //Regions.UK, Regions.UAE, Regions.NIGERIA, Regions.ISRAEL, Regions.BRAZIL,
+    //Regions.MALAYSIA, Regions.BALKAN, Regions.PHILIPPINES, Regions.JAPAN, Regions.FRANCE,
+    //Regions.CANADA, Regions.SINGAPORE, Regions.POLAND, Regions.KOREA, Regions.IRELAND,
+    //Regions.UKRAINE, Regions.ARGENTINA, Regions.USA, Regions.SPAIN
   ];
 
   // --- Create a dummy User for pocId ---
@@ -66,7 +78,7 @@ async function main() {
   });
   console.log(`Created dummy sponsor with ID: ${dummySponsor.id}`);
 
-  // --- Insert 10 Bounties items ---
+  // --- Insert 100 Bounties items ---
   const bountiesData = [];
   for (let i = 0; i < 10; i++) {
     const title = `Bounty Title ${i + 1}`;
@@ -82,10 +94,8 @@ async function main() {
       assignedSkills.push(shuffledSkills[j]);
     }
 
-    // Alternate bounty types
-    const bountyType = bountyTypes[i % bountyTypes.length];
+    const bountyType = bountyTypes[Math.floor(Math.random() * bountyTypes.length)];
 
-    // Alternate regions: Every 3rd bounty is GLOBAL, otherwise cycle through availableRegions
     let assignedRegion: Regions;
     if ((i + 1) % 3 === 0) {
       assignedRegion = Regions.GLOBAL;
@@ -100,41 +110,52 @@ async function main() {
     let minRewardAsk: number | undefined = undefined;
     let usdValue: number | undefined = 1000 + ((i + 1) * 50);
 
-    // Specific logic for project types with variable and range compensation
     if (bountyType === BountyType.project) {
-      if ((i + 1) % 2 === 0) { // Even projects: variable compensation
+      if ((i + 1) % 2 === 0) {
         compensationType = CompensationType.variable;
-        rewardAmount = undefined; // Variable compensation doesn't have a fixed rewardAmount
-        rewards = undefined; // Variable compensation doesn't have fixed rewards
+        rewardAmount = undefined;
+        rewards = undefined;
         maxRewardAsk = 5000 + ((i + 1) * 100);
         minRewardAsk = 1000 + ((i + 1) * 50);
-        usdValue = undefined; // USD value might be estimated or left out for variable
-      } else { // Odd projects: range compensation
+        usdValue = undefined;
+      } else {
         compensationType = CompensationType.range;
-        rewardAmount = undefined; // Range compensation doesn't have a fixed rewardAmount
-        rewards = undefined; // Range compensation doesn't have fixed rewards
+        rewardAmount = undefined;
+        rewards = undefined;
         maxRewardAsk = 3000 + ((i + 1) * 75);
         minRewardAsk = 1500 + ((i + 1) * 25);
-        usdValue = (maxRewardAsk + minRewardAsk) / 2; // Estimate USD value as average
+        usdValue = (maxRewardAsk + minRewardAsk) / 2;
       }
     }
 
-    // --- New Logic for Alternating Token ---
-    const currentToken = tokens[currentTokenIndex];
-    currentTokenIndex = (currentTokenIndex + 1) % tokens.length; // Cycle to the next token
+    // --- MODIFIED: Weighted random selection for token ---
+    let randomWeight = Math.random() * totalWeight; // Get a random number between 0 and totalWeight
+    let currentToken: string;
+
+    for (const item of weightedTokens) {
+      if (randomWeight < item.weight) {
+        currentToken = item.token;
+        break;
+      }
+      randomWeight -= item.weight;
+    }
+    // Fallback in case of rounding errors, though it should ideally not be hit
+    if (!currentToken) {
+      currentToken = weightedTokens[0].token; // Default to USDC if something goes wrong
+    }
 
     bountiesData.push({
       title: title,
       slug: slug,
-      description: `This is a detailed description for ${bountyType} ${i + 1}. It involves solving a challenging problem related to ${assignedSkills.join(', ')} development in the ${assignedRegion} region. Compensation type: ${compensationType}. The reward is in ${currentToken}.`, // Added token to description
+      description: `This is a detailed description for ${bountyType} ${i + 1}. It involves solving a challenging problem related to ${assignedSkills.join(', ')} development in the ${assignedRegion} region. Compensation type: ${compensationType}. The reward is in ${currentToken}.`,
       deadline: deadline,
       eligibility: { regions: [assignedRegion], skills: assignedSkills },
-      status: i % 2 === 0 ? status.OPEN : status.REVIEW,
-      token: currentToken, // <--- This is the change!
-      rewardAmount: rewardAmount, // Dynamically set
-      rewards: rewards, // Dynamically set
+      status: status.OPEN,
+      token: currentToken, // This is now dynamically chosen based on weights
+      rewardAmount: rewardAmount,
+      rewards: rewards,
       maxBonusSpots: (i + 1) % 3,
-      usdValue: usdValue, // Dynamically set
+      usdValue: usdValue,
       sponsorId: dummySponsor.id,
       pocId: dummyUser.id,
       source: Source.NATIVE,
@@ -147,15 +168,15 @@ async function main() {
       type: bountyType,
       requirements: `Applicants must have strong experience in ${assignedSkills[0].toLowerCase()} development.`,
       isWinnersAnnounced: false,
-      region: /* assignedRegion */ Regions.VIETNAM,
+      region: assignedRegion,
       pocSocials: `@pocuser${i + 1}`,
       hackathonprize: bountyType === BountyType.hackathon,
       applicationType: ApplicationType.fixed,
       timeToComplete: `${(i % 3) + 1} weeks`,
       references: { docs: 'link to docs' },
-      compensationType: compensationType, // Dynamically set
-      maxRewardAsk: maxRewardAsk, // Dynamically set
-      minRewardAsk: minRewardAsk, // Dynamically set
+      compensationType: compensationType,
+      maxRewardAsk: maxRewardAsk,
+      minRewardAsk: minRewardAsk,
       language: 'English',
       shouldSendEmail: true,
       isFndnPaying: false,
@@ -166,7 +187,7 @@ async function main() {
     await prisma.bounties.create({
       data: bounty,
     });
-    console.log(`Created bounty with title: "${bounty.title}", type: "${bounty.type}", region: "${bounty.region}", compensation: "${bounty.compensationType}", and token: "${bounty.token}"`); // Added token to log
+    console.log(`Created bounty with title: "${bounty.title}", type: "${bounty.type}", region: "${bounty.region}", compensation: "${bounty.compensationType}", and token: "${bounty.token}"`);
   }
 
   console.log('Seeding finished.');
