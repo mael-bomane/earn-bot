@@ -27,7 +27,6 @@ export class BountyCacheService implements OnModuleInit {
   ) { }
 
   async onModuleInit() {
-    console.log('BountyCacheService started');
     // Initial cache warm-up on application start
     this.logger.log('Warming up bounty cache on application start...');
     try {
@@ -37,7 +36,8 @@ export class BountyCacheService implements OnModuleInit {
     }
   }
 
-  @Cron(CRON_SCHEDULE, { name: 'bounty-cache' }) // This cron will now also trigger the comparison
+  // every hour : fetch DB bounties, compare with cached values, schedule notifications in 12h 
+  @Cron(CRON_SCHEDULE, { name: 'bounty-cache' })
   async handleCron() {
     this.logger.debug('Starting cron job: Fetching, caching, and comparing bounties...');
 

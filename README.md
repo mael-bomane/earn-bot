@@ -23,7 +23,7 @@ This project uses the following technologies :
 
 ### Environment Variables
 
-You can find an exhaustive `.env.example` at the root of this repository, explaining all expected environment variables.
+`.env.example` explain all mandatory and optional environment variables.
 
 ### Development Setup
 
@@ -47,6 +47,45 @@ This project expects a `DATABASE_URL` environment variable for `Mysql` with this
 ```bash
 $ docker compose up
 $ docker compose down # deletes containers and volumes 
+```
+
+The Database Schema is a copy of [Superteam Earn] Database Schema, with the following additions : 
+
+```prisma
+
+model TelegramUser {
+  id                    BigInt             @id @unique // telegram user ID
+  region                Regions            @default(GLOBAL)
+  skills                Json               @default("[\"ALL\"]")
+  setup                 Boolean            @default(false) // true after /start initial setup 
+  notificationPreferences NotificationType @default(NONE) // Bounty, Project, Both or None
+  minAsk                Int                @default(0) // 0 = any listing value
+  bountyNotifications   BountyNotification[] // for backtracking with BountyNotification model
+}
+
+model BountyNotification {
+  id               String            @id @default(uuid())
+  telegramUserId   BigInt            
+  telegramUser     TelegramUser      @relation(fields: [telegramUserId], references: [id])
+  bountyId         String            
+  bountyDetails    Json             
+  notificationType String           
+  sendAt           DateTime        
+  sent             Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // index for faster lookup of unsent notifications by sendAt
+  @@index([sendAt, sent])
+}
+
+enum NotificationType {
+  BOUNTY
+  PROJECT
+  BOTH
+  NONE
+}
+
 ```
 
 ### Directory Tree

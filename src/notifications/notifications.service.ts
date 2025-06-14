@@ -59,6 +59,10 @@ export class BountyNotificationService {
     }
   }
 
+  /**
+   * Helper to format due date `Due in X Days/Hours`
+   * @param deadline Date or Date string
+   */
   private formatDeadlineRemaining = (deadline: Date | string): string => {
     const now = new Date();
     const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
@@ -90,12 +94,12 @@ export class BountyNotificationService {
    * @param userId The ID of the Telegram user to notify (BigInt).
    * @param bountyId The unique ID of the bounty.
    * @param bountyDetails Relevant details about the bounty and changes, conforming to BountyDetails interface.
-   * @param changeType The specific change type (e.g., 'NEW_BOUNTY', 'REGION_UPDATED').
-   * @param notificationBountyType The original type of the bounty (e.g., BountyType.BOUNTY, BountyType.PROJECT)
+   * @param changeType The specific change type : 'NEW_BOUNTY', 'REGION_UPDATED' or 'DEADLINE_UPDATED'
+   * @param notificationBountyType The original type of the bounty : BountyType.BOUNTY or BountyType.PROJECT
    * for more precise messaging if needed.
    */
   async scheduleBountyNotification(
-    userId: bigint, // Changed to bigint to match TelegramUser.id
+    userId: bigint, // TelegramUser.id is too big to be an Int
     bountyId: string,
     bountyDetails: BountyDetails, // Use the specific interface
     changeType: 'NEW_BOUNTY' | 'REGION_UPDATED' | 'DEADLINE_UPDATED', // Be specific about accepted types
@@ -103,7 +107,8 @@ export class BountyNotificationService {
   ): Promise<BountyNotification> {
 
     const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development' || 'test';
-    const delayMilliseconds = isDevelopment ? 5 * 1000 : 12 * 60 * 60 * 1000; // 5 seconds for dev, 12 hours for prod
+    // notification delay is 5 seconds for development or test, 12 hours in prodoction
+    const delayMilliseconds = isDevelopment ? 5 * 1000 : 12 * 60 * 60 * 1000;
     const sendAt = new Date(Date.now() + delayMilliseconds);
 
     this.logger.log(`Scheduling notification for user ${userId} about bounty ${bountyId} (change type: ${changeType}, bounty type: ${notificationBountyType}) to be sent at ${sendAt.toISOString()}`);
@@ -249,19 +254,22 @@ export class BountyNotificationService {
   }
 
   /**
-   * Cron job to clean up sent bounty notifications older than 7 days.
+   * Cron job to clean up sent bounty notifications older than 2 months
+   * 2 months delay is long enough to not notify the same uesr twice about the same bounty/project.
+   * at worst, you get notified in 2 months for a bounty/project matching your criteria
+   * thus the bounty/project would need to stay online for 2 months without updates (unlikely) 
    * Runs every day at midnight.
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async cleanupSentNotifications() {
-    this.logger.debug('Cleaning up sent bounty notifications older than 7 days...');
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    this.logger.debug('Cleaning up sent bounty notifications older than 30 days...');
+    const twoMonthsAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     try {
       const { count } = await this.prisma.bountyNotification.deleteMany({
         where: {
           sent: true,
           createdAt: {
-            lte: sevenDaysAgo,
+            lte: twoMonthsAgo,
           },
         },
       });
