@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, Inject, OnModuleDestroy, OnApplicationBootstrap } from '@nestjs/common';
 import { Telegraf, Context, Markup } from 'telegraf';
-import { CallbackQuery, InlineKeyboardMarkup } from 'telegraf/types';
+import { CallbackQuery } from 'telegraf/types';
 import { TELEGRAF_BOT, REGIONS, SKILLS } from './telegram.constants';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -229,7 +229,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
         await ctx.reply(
           `Please select what kind of notifications you'd like to receive:\n\nCurrently receiving for:${notificationDisplay}`,
           {
-            ...this.getNotificationKeyboard(currentNotificationType), // Pass the single enum value
+            ...this.getNotificationKeyboard(), // Pass the single enum value
             parse_mode: 'HTML'
           }
         );
@@ -287,39 +287,47 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
 
         const isSetupComplete = updatedUser?.setup;
 
-        let replyMessage: string;
-        let replyKeyboard: InlineKeyboardMarkup | undefined;
-
         if (isSetupComplete && updatedUser) {
           const mentionLink = `<a href="tg://user?id=${userId}">@${ctx.from.username ?? userId}</a>`;
-          replyMessage = this.generateProfileSummary(updatedUser, mentionLink);
-          replyKeyboard = undefined;
-        } else {
-          const regionFlag = this.getFlagForRegion(selectedRegion);
-          replyMessage = `Your region has been set to: <b>${this.capitalizeFirstLetter(selectedRegion.toLowerCase())}</b> ${regionFlag}.\n\nReady to select your skills?`;
-          replyKeyboard = Markup.inlineKeyboard([
-            Markup.button.callback('🚀 Select My Skills', 'action_select_skills')
-          ]).reply_markup;
-        }
-
-        try {
+          const replyMessage = this.generateProfileSummary(updatedUser, mentionLink);
           if (ctx.callbackQuery?.message) {
             await ctx.editMessageText(replyMessage, {
-              reply_markup: replyKeyboard,
               parse_mode: 'HTML'
             });
           } else {
             await ctx.reply(replyMessage, {
-              reply_markup: replyKeyboard,
               parse_mode: 'HTML'
             });
           }
-        } catch (error) {
-          console.error('Error editing message or sending new one after region update:', error);
-          await ctx.reply(replyMessage, {
-            reply_markup: replyKeyboard,
-            parse_mode: 'HTML'
+        } else {
+          // Immediately proceed to skills selection
+          const userInDb = await this.prisma.telegramUser.findUnique({
+            where: { id: userId },
+            select: { skills: true }
           });
+          const currentSkills: string[] = (userInDb?.skills as string[]) || [];
+
+          const skillsListDisplay = currentSkills.length > 0
+            ? currentSkills.map(skill => `\n· ${this.capitalizeFirstLetter(skill.toLowerCase())}`).join('')
+            : `\n· Not set`;
+
+          if (ctx.callbackQuery?.message) {
+            await ctx.editMessageText(
+              `Region set to: <b>${this.capitalizeFirstLetter(selectedRegion.toLowerCase())}</b> ${this.getFlagForRegion(selectedRegion)}.\n\nPlease select your skills. You can choose multiple:\n\nYour skills are :${skillsListDisplay}`,
+              {
+                ...this.getSkillsKeyboard(currentSkills),
+                parse_mode: 'HTML'
+              }
+            );
+          } else {
+            await ctx.reply(
+              `Your region has been set to: <b>${this.capitalizeFirstLetter(selectedRegion.toLowerCase())}</b> ${this.getFlagForRegion(selectedRegion)}.\n\nPlease select your skills. You can choose multiple:\n\nYour skills are :${skillsListDisplay}`,
+              {
+                ...this.getSkillsKeyboard(currentSkills),
+                parse_mode: 'HTML'
+              }
+            );
+          }
         }
 
         await ctx.answerCbQuery(`Region set to ${selectedRegion}`);
@@ -459,9 +467,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
             : `\n· ${this.capitalizeFirstLetter(currentNotificationType.toLowerCase())}`;
 
           await ctx.editMessageText(
-            `Great! Now, please select what kind of notifications you'd like to receive for future opportunities:\n\nCurrently receiving for:${notificationDisplay}`,
+            `🔔For which opportunies should we notify you ?`,
             {
-              ...this.getNotificationKeyboard(currentNotificationType), // Pass the single enum value
+              ...this.getNotificationKeyboard(), // Pass the single enum value
               parse_mode: 'HTML'
             }
           );
@@ -572,7 +580,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
       try {
         await this.prisma.telegramUser.update({
           where: { id: userId },
-          data: { minAsk: selectedMinAsk, setup: true }, // Mark setup as true here
+          data: { minAsk: selectedMinAsk, setup: true }, // commit setup=true for TelegramUser on DB for future interactions
         });
         console.log(`User ${userId} updated minAsk to: ${selectedMinAsk} in DB`);
 
@@ -657,16 +665,33 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy, OnApplica
    * @param currentNotificationType The currently selected NotificationType enum.
    * @returns InlineKeyboardMarkup for notification selection.
    */
-  private getNotificationKeyboard(currentNotificationType: NotificationType) {
+  private getNotificationKeyboard() {
     const buttonsPerRow = 2;
     const notificationTypes = [NotificationType.BOUNTY, NotificationType.PROJECT, NotificationType.BOTH, NotificationType.NONE]; // Explicit list
 
     const notificationButtons = notificationTypes.map(type => {
-      const isSelected = currentNotificationType === type; // Check if the current type matches
-      const emoji = isSelected ? '✅ ' : '';
-      return Markup.button.callback(`${emoji}${this.capitalizeFirstLetter(type.toLowerCase())}`, `notification_select_${type.toLowerCase()}`); // Changed action to select_
+      let emoji = '';
+      let buttonText = '';
+      switch (type) {
+        case NotificationType.BOUNTY:
+          emoji = '⚡️ '; // Zap lightning emoji
+          buttonText = 'Bounty';
+          break;
+        case NotificationType.PROJECT:
+          emoji = '💼 '; // Briefcase emoji
+          buttonText = 'Project';
+          break;
+        case NotificationType.BOTH:
+          emoji = '🔥 '; // Fire emoji
+          buttonText = 'Both';
+          break;
+        case NotificationType.NONE:
+          emoji = '❌ '; // Red cross emoji
+          buttonText = 'None';
+          break;
+      }
+      return Markup.button.callback(`${emoji}${buttonText}`, `notification_select_${type.toLowerCase()}`);
     });
-
     const rows = [];
     for (let i = 0; i < notificationButtons.length; i += buttonsPerRow) {
       rows.push(notificationButtons.slice(i, i + buttonsPerRow));
