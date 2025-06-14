@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BountyType, status, Regions, NotificationType } from '@prisma/client'; // Import ScheduledNotificationStatus
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { BountyDetails } from '../interfaces/bounty.interface';
+import { BountyDetails } from '../types/bounty.interface';
 import { BountyNotificationService } from '../notifications/notifications.service';
 import { TelegramUser } from '@prisma/client';
 

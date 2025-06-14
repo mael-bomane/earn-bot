@@ -19,6 +19,52 @@ This project uses the following technologies :
 - Respects Telegram API's rate-limit of 30 notifications per second.
 - Ignores hackathons listings and bounties/projects that are closed or under review
 
+```
+earn-bot/
+├── src/
+│   ├── schema.prisma # additions but no deletions/modifications of https://github.com/SuperteamDAO/earn/blob/main/prisma/schema.prisma 
+│   └── seed.ts # file used by `npx prisma db seed`
+├── src/
+│   ├── main.ts # uses fastify for performance
+│   ├── app.module.ts
+│   ├── app.controller.ts
+│   ├── app.service.ts
+│   │
+│   ├── bounty-cache/
+│   │   └── bounty-cache.service.ts # compare DB with cached values & schedule notifications
+│   │
+│   ├── telegram/
+│   │   ├── telegram.constants.ts
+│   │   ├── telegram.module.ts #  custom bot provider
+│   │   └── telegram.service.ts # telegram bot related-code tp setup user, update settings, send message
+│   │
+│   ├── users/
+│   │   ├── users.module.ts
+│   │   ├── users.controller.ts
+│   │   ├── users.service.ts
+│   │   └── dto/
+│   │       └── create-user.dto.ts
+│   │
+│   ├── common/
+│   │   ├── filters/
+│   │   │   └── http-exception.filter.ts
+│   │   ├── guards/
+│   │   │   └── auth.guard.ts
+│   │   └── interceptors/
+│   │       └── transform.interceptor.ts
+│   │
+│   └── shared/
+│       ├── shared.module.ts
+│       └── constants/
+│           └── api-routes.ts
+│
+├── test/
+│   ├── app.e2e-spec.ts
+│   └── jest-e2e.json
+│
+└── .env.example
+```
+
 ## Project setup
 
 ### Environment Variables

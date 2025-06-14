@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { BountyNotification, BountyType } from '@prisma/client';
-import { BountyDetails } from '../interfaces/bounty.interface';
+import { BountyDetails } from '../types/bounty.interface';
 
 // Define the cron schedule based on NODE_ENV
 const CRON_SCHEDULE =
