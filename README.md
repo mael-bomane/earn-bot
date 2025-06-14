@@ -19,51 +19,7 @@ This project uses the following technologies :
 - Respects Telegram API's rate-limit of 30 notifications per second.
 - Ignores hackathons listings and bounties/projects that are closed or under review
 
-```
-earn-bot/
-├── src/
-│   ├── schema.prisma # additions but no deletions/modifications of https://github.com/SuperteamDAO/earn/blob/main/prisma/schema.prisma 
-│   └── seed.ts # file used by `npx prisma db seed`
-├── src/
-│   ├── main.ts # uses fastify for performance
-│   ├── app.module.ts
-│   ├── app.controller.ts
-│   ├── app.service.ts
-│   │
-│   ├── bounty-cache/
-│   │   └── bounty-cache.service.ts # compare DB with cached values & schedule notifications
-│   │
-│   ├── telegram/
-│   │   ├── telegram.constants.ts
-│   │   ├── telegram.module.ts #  custom bot provider
-│   │   └── telegram.service.ts # telegram bot related-code tp setup user, update settings, send message
-│   │
-│   ├── users/
-│   │   ├── users.module.ts
-│   │   ├── users.controller.ts
-│   │   ├── users.service.ts
-│   │   └── dto/
-│   │       └── create-user.dto.ts
-│   │
-│   ├── common/
-│   │   ├── filters/
-│   │   │   └── http-exception.filter.ts
-│   │   ├── guards/
-│   │   │   └── auth.guard.ts
-│   │   └── interceptors/
-│   │       └── transform.interceptor.ts
-│   │
-│   └── shared/
-│       ├── shared.module.ts
-│       └── constants/
-│           └── api-routes.ts
-│
-├── test/
-│   ├── app.e2e-spec.ts
-│   └── jest-e2e.json
-│
-└── .env.example
-```
+
 
 ## Project setup
 
@@ -74,32 +30,52 @@ You can find an exhaustive `.env.example` at the root of this repository, explai
 ### Initial Setup
 
 ```bash
-# run install 
-$ pnpm i
-# generate prisma client based on `prisma/schema.prisma`
-$ npx prisma generate
-# development only, creates tables in the local database
-$ npx prisma db push
+
+$ pnpm i # run install 
+
+$ npx prisma generate # generate prisma client based on `prisma/schema.prisma`
+
+$ npx prisma db push # development only, creates tables in the local database
+
+$ npx prisma db push # development only, seed database with dummy data
 ```
 
 ### Database
 
-This project expectes a `DATABASE_URL` for `Mysql` using the format `mysql://user:password@host:port/database`
+This project expects a `DATABASE_URL` for `Mysql` using the format `mysql://user:password@host:port/database`
 
-This project includes a `docker-compose.yaml` file to spin up a `MySQL` database, along with a `phpMyAdmin` dashboard on localhost.
-
-In production, don't use this `Dockerfile` are expected to be passed as `mysql://` and `redis://` to environment variables.
+`docker-compose.yaml` convinience to spin up `MySQL` database and `phpMyAdmin` dashboard on localhost.
 
 ```bash
 $ docker compose up
+$ docker compose down # deletes containers and volumes 
 ```
 
-### Database Seeding (Testing)
+### Directory Tree
 
-You can seed the database with 10 Bounty items, a user and a sponsor.
-
-```bash
-$ npx prisma db seed
+```
+earn-bot/
+├── src/
+│   ├── schema.prisma # additions but no deletions/modifications of existing models
+│   └── seed.ts # used by `npx prisma db seed` for testing
+├── src/
+│   ├── bounty-cache/
+│   │   └── bounty-cache.service.ts # compare DB with cached values & schedule notifications
+│   │
+│   ├── telegram/
+│   │   └── telegram.service.ts # telegram bot related-code tp setup user, update settings, send message
+│   │
+│   └── prisma/
+│       ├── prisma.module.ts
+│       ├── prisma.controller.ts
+│       ├── prisma.service.ts
+│       └── dto/
+│
+├── test/
+│   ├── app.e2e-spec.ts
+│   └── jest-e2e.json
+│
+└── .env.example # explains required and optional environment variables
 ```
 
 ## Compile and run the project
@@ -118,9 +94,8 @@ $ pnpm run start:prod
 ## Technical Considerations 
 
 The current [Superteam Earn Database Schema](https://github.com/SuperteamDAO/earn/blob/main/prisma/schema.prisma) uses `Json`
-type for skills on both `User` and `Bounties` tables and allows `null` or `undefined` values resulting in "type guessing", 
+type for `skills` on both `User` and `Bounties` tables and allows `null` or `undefined` values resulting in "type guessing", 
 I assumed a string array — which is valid `Json`, but if any adjustments are needed feel free to DM me.
-
 
 ## Stay in touch
 
