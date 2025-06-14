@@ -14,12 +14,10 @@ This project uses the following technologies :
 
 ## Features
 
-- User preferences setup & update in telegram : **skills**, **region**, **listing value**.
-- Notify users on telegram for **new** or **updated** bounties based on user preferences.
+- User preferences setup & update in telegram : **region**, **skills**, **listing value**.
+- Notify users on telegram for **new** or **updated** (region or deadline change) bounties based on user preferences.
 - Respects Telegram API's rate-limit of 30 notifications per second.
-- Ignores hackathons listings and bounties/projects that are closed or under review
-
-
+- Ignores hackathons listings and bounties/projects that are closed, under review or private
 
 ## Project setup
 
@@ -27,7 +25,7 @@ This project uses the following technologies :
 
 You can find an exhaustive `.env.example` at the root of this repository, explaining all expected environment variables.
 
-### Initial Setup
+### Development Setup
 
 ```bash
 
@@ -37,12 +35,12 @@ $ npx prisma generate # generate prisma client based on `prisma/schema.prisma`
 
 $ npx prisma db push # development only, creates tables in the local database
 
-$ npx prisma db push # development only, seed database with dummy data
+$ npx prisma db seed # development only, seed database with dummy data using src/prisma/seed.ts
 ```
 
 ### Database
 
-This project expects a `DATABASE_URL` for `Mysql` using the format `mysql://user:password@host:port/database`
+This project expects a `DATABASE_URL` environment variable for `Mysql` with this format : `mysql://user:password@host:port/database`
 
 `docker-compose.yaml` convinience to spin up `MySQL` database and `phpMyAdmin` dashboard on localhost.
 
@@ -75,6 +73,7 @@ earn-bot/
 │   ├── app.e2e-spec.ts
 │   └── jest-e2e.json
 │
+├── docker-compose.yaml # convinience file to spin a MySQL & phpMyAdmin on localhost
 └── .env.example # explains required and optional environment variables
 ```
 
