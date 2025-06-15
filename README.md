@@ -51,7 +51,7 @@ $ docker compose up
 $ docker compose down # deletes containers and volumes 
 ```
 
-The Database Schema is a copy of [Superteam Earn] Database Schema, with the following additions : 
+The Database Schema is a copy of [Superteam Earn Database Schema](https://github.com/SuperteamDAO/earn/blob/main/prisma/schema.prisma), with the following additions : 
 
 ```prisma
 
