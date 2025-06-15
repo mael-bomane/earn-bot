@@ -24,6 +24,7 @@ Telegram Bot for [Superteam Earn](https://earn.superteam.fun) notifications.
 - Filtering by **Region**, **Skills** & **Listing value**
 - In-App user preferences management
 - 12h delay before sending notification
+- Notification with : listing title, sponsor, token & amount, due date, link to SuperteamEarn
 - Respects Telegram rate-limit of 30 messages/second
 - Ignores hackathons, private/closed/reviewing bounties
 
