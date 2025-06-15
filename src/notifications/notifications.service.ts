@@ -193,16 +193,16 @@ export class BountyNotificationService {
       switch (notificationType) {
         case 'NEW_BOUNTY':
           message =
-            `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> >` +
-            ` available for <b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}\n\n` +
+            `${bountyTypeName.toLowerCase() == 'project' ? '💼' : '⚡'} New <b>${this.capitalizeFirstLetter(bountyTypeName.toLowerCase())}</b> > ` +
+            `<b>${this.capitalizeFirstLetter(bounty.region.toLowerCase())}</b> ${this.getFlagForRegion(bounty.region)}\n\n` +
             `<a href="${bounty.link}"><b>${bounty.name}</b></a>\n` +
             `By <b>${bounty.sponsorName}</b>\n\n` +
             (bounty.compensationType == 'fixed' ?
-              `<b>${bounty.payout}</b> \n`
+              `<b>${bounty.payout}</b> `
               :
-              `<b>${bounty.minRewardAsk} ~ ${bounty.maxRewardAsk}</b> \n`
+              `<b>${bounty.minRewardAsk} ~ ${bounty.maxRewardAsk}</b> `
             ) +
-            `<b>${bounty.token ?? 'N/A'}</b> <i>${bounty.compensationType.toLocaleLowerCase() !== '— Fixed' ? '— Variable' : ''} Compensation </i> \n\n` +
+            `<b>${bounty.token ?? 'N/A'}</b>\n <i>${bounty.compensationType.toLocaleLowerCase() !== 'fixed' ? '— Variable' : '— Fixed'} Compensation </i> \n\n` +
             `Required Skills :\n ${skillsListDisplay}\n\n` +
             (bounty.deadline ?
               `${this.formatDeadlineRemaining(bounty.deadline)}\n\n`

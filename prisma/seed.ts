@@ -5,6 +5,8 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Start seeding ...');
 
+  const bountiesData = []; // Declared here
+
   // Define your allowed skills
   const availableSkills = [
     "FRONTEND",
@@ -67,10 +69,10 @@ async function main() {
     where: { slug: 'dummy-sponsor' },
     update: {},
     create: {
-      name: 'Dummy Sponsor Inc.',
+      name: 'Superteam',
       slug: 'dummy-sponsor',
       industry: 'Technology',
-      twitter: 'https://twitter.com/dummies',
+      twitter: 'https://twitter.com/superteam',
       bio: 'A great company that loves to sponsor bounties.',
       isVerified: true,
       isActive: true,
@@ -78,21 +80,45 @@ async function main() {
   });
   console.log(`Created dummy sponsor with ID: ${dummySponsor.id}`);
 
-  // --- Insert 100 Bounties items ---
-  const bountiesData = [];
-  for (let i = 0; i < 10; i++) {
-    const title = `Bounty Title ${i + 1}`;
-    const slug = `bounty-slug-${i + 1}-${Date.now()}`;
+  // --- Dynamic Title Generation based on Skills ---
+  const numberOfBounties = 20; // You can adjust this number
+  const baseTitles = {
+    FRONTEND: ["Build a Responsive Web3 Dashboard", "Develop a Dynamic User Interface", "Implement a Decentralized Frontend"],
+    BACKEND: ["Engineer a Scalable API for DApps", "Develop a Secure Backend Service", "Build a High-Performance Data Layer"],
+    MOBILE: ["Create a Cross-Platform Mobile Wallet", "Develop an Intuitive iOS/Android App", "Optimize Mobile Performance for Web3"],
+    BLOCKCHAIN: ["Audit a Solana Smart Contract", "Develop a New DeFi Protocol", "Integrate Chainlink Oracles"],
+    DESIGN: ["Craft Engaging UI/UX for a dApp", "Design a Brand Identity for a Web3 Project", "Create Stunning Visual Assets"],
+    CONTENT: ["Write a Compelling Whitepaper", "Produce a Series of Educational Articles", "Develop a Social Media Content Strategy"],
+    COMMUNITY: ["Manage a Thriving Telegram Community", "Lead Our Discord Moderation Team", "Grow Our Web3 User Base"],
+    GROWTH: ["Devise a User Acquisition Strategy", "Execute a Viral Marketing Campaign", "Analyze Growth Metrics for a dApp"],
+    OTHER: ["Research Blockchain Interoperability Solutions", "Consult on Tokenomics Design", "Provide Expert Web3 Legal Advice"],
+  };
+
+  for (let i = 0; i < numberOfBounties; i++) {
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + ((i + 1) * 7));
 
-    // Assign skills dynamically
+    // Assign skills dynamically (ensuring at least one skill is picked for title relevance)
     const assignedSkills: string[] = [];
-    const numSkills = Math.floor(Math.random() * 3) + 1;
+    const numSkills = Math.floor(Math.random() * 3) + 1; // 1 to 3 skills
     const shuffledSkills = [...availableSkills].sort(() => 0.5 - Math.random());
     for (let j = 0; j < numSkills; j++) {
       assignedSkills.push(shuffledSkills[j]);
     }
+
+    // Ensure at least one skill is assigned if by chance none were picked (very rare, but good for robustness)
+    if (assignedSkills.length === 0) {
+      assignedSkills.push(availableSkills[Math.floor(Math.random() * availableSkills.length)]);
+    }
+
+    // Get a title relevant to the first assigned skill
+    const primarySkill = assignedSkills[0] as keyof typeof baseTitles;
+    const relevantTitles = baseTitles[primarySkill] || baseTitles.OTHER; // Fallback to OTHER
+    const title = relevantTitles[Math.floor(Math.random() * relevantTitles.length)];
+
+    // Generate a short random string to append to the slug for uniqueness
+    const randomHash = Math.random().toString(36).substring(2, 8); // e.g., "kl9a1b"
+    const slug = `${title.toLowerCase().replace(/\s+/g, '-')}-${randomHash}-${Date.now()}`; // Add randomHash and timestamp for strong uniqueness
 
     const bountyType = bountyTypes[Math.floor(Math.random() * bountyTypes.length)];
 
@@ -130,7 +156,7 @@ async function main() {
 
     // --- MODIFIED: Weighted random selection for token ---
     let randomWeight = Math.random() * totalWeight; // Get a random number between 0 and totalWeight
-    let currentToken: string;
+    let currentToken: string = weightedTokens[0].token; // Initialize with a default
 
     for (const item of weightedTokens) {
       if (randomWeight < item.weight) {
@@ -139,19 +165,15 @@ async function main() {
       }
       randomWeight -= item.weight;
     }
-    // Fallback in case of rounding errors, though it should ideally not be hit
-    if (!currentToken) {
-      currentToken = weightedTokens[0].token; // Default to USDC if something goes wrong
-    }
 
     bountiesData.push({
       title: title,
       slug: slug,
-      description: `This is a detailed description for ${bountyType} ${i + 1}. It involves solving a challenging problem related to ${assignedSkills.join(', ')} development in the ${assignedRegion} region. Compensation type: ${compensationType}. The reward is in ${currentToken}.`,
+      description: `This is a detailed description for a ${bountyType} focused on "${title}". It involves solving a challenging problem related to ${assignedSkills.join(', ')} development in the ${assignedRegion} region. Compensation type: ${compensationType}. The reward is in ${currentToken}.`,
       deadline: deadline,
       eligibility: { regions: [assignedRegion], skills: assignedSkills },
       status: status.OPEN,
-      token: currentToken, // This is now dynamically chosen based on weights
+      token: currentToken,
       rewardAmount: rewardAmount,
       rewards: rewards,
       maxBonusSpots: (i + 1) % 3,
