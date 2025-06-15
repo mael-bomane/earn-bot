@@ -137,6 +137,8 @@ The current [Superteam Earn Database Schema](https://github.com/SuperteamDAO/ear
 type for `skills` on both `User` and `Bounties` tables and allows `null` or `undefined` values resulting in "type guessing", 
 I assumed a string array — which is valid `Json`, but if any adjustments are needed feel free to DM me.
 
+Still regarding the current Database Schema, token name in a Bounty
+
 ## Stay in touch
 
 - Author - [Mael Bomane](https://x.com/mael_bomane)
