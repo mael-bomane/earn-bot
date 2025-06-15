@@ -1,5 +1,7 @@
 # Earn Bot
 
+👉 [UX Demo](https://youtu.be/Mek6DReBdl8)
+
 ## Description
 
 Telegram Bot for [Superteam Earn](https://earn.superteam.fun) notifications.
