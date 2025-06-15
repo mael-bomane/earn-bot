@@ -1,25 +1,31 @@
 # Earn Bot
 
-👉 [UX Demo](https://youtu.be/Mek6DReBdl8)
-
-## Description
-
 Telegram Bot for [Superteam Earn](https://earn.superteam.fun) notifications.
 
-This project uses the following technologies :
+## UX Demo
+
+👉 [UX Demo](https://youtu.be/Mek6DReBdl8)
+
+## User Menu PR
+
+👉 [User Menu PR](https://github.com/SuperteamDAO/earn/pull/1109)
+
+## Tech Stack :
 
 - [pnpm](https://pnpm.io/) package manager
-- [NestJS](https://nestjs.com/) backend
-- [telegraf.js](https://github.com/telegraf/telegraf) telegram framework
+- [NestJS](https://nestjs.com/) production-grade backend framework
+- [telegraf.js](https://github.com/telegraf/telegraf) telegram SDK
 - [MySQL](https://www.mysql.com/) database
 - [Prisma](https://www.prisma.io/) ORM
 
 ## Features
 
-- User preferences setup & update in telegram : **region**, **skills**, **listing value**.
-- Notify users on telegram for **new** or **updated** (region or deadline change) bounties based on user preferences.
-- Respects Telegram API's rate-limit of 30 notifications per second.
-- Ignores hackathons listings and bounties/projects that are closed, under review or private
+- Notify users for new or updated *(region or deadline)* Superteam Earn opportunities
+- Filtering by **Region**, **Skills** & **Listing value**
+- In-App user preferences management
+- 12h delay before sending notification
+- Respects Telegram rate-limit of 30 messages/second
+- Ignores hackathons, private/closed/reviewing bounties
 
 ## Project setup
 
@@ -30,14 +36,10 @@ This project uses the following technologies :
 ### Development Setup
 
 ```bash
-
-$ pnpm i # run install 
-
-$ npx prisma generate # generate prisma client based on `prisma/schema.prisma`
-
-$ npx prisma db push # development only, creates tables in the local database
-
-$ npx prisma db seed # development only, seed database with dummy data using src/prisma/seed.ts
+cp .env.example .env
+pnpm i
+prisma db push
+prisma db seed
 ```
 
 ### Database
