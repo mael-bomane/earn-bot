@@ -9,15 +9,15 @@ async function main() {
 
   // Define your allowed skills
   const availableSkills = [
-    "FRONTEND",
-    "BACKEND",
-    "MOBILE",
-    "BLOCKCHAIN",
-    "DESIGN",
-    "CONTENT",
-    "COMMUNITY",
-    "GROWTH",
-    "OTHER",
+    "Frontend",
+    "Backend",
+    "Mobile",
+    "Blockchain",
+    "Design",
+    "Content",
+    "Community",
+    "Growth",
+    "Other",
   ];
 
   // Define bounty types for cycling
